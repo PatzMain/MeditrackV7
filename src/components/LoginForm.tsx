@@ -39,15 +39,27 @@ const LoginForm: React.FC = () => {
     <div className="login-wrapper">
       <div className="login-header">
         <div className="university-logo">
-          <div className="logo-placeholder">
-            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="#2E7D32"/>
-              <path d="M12 2C12 2 15 5 15 9C15 11.21 13.21 13 11 13C8.79 13 7 11.21 7 9C7 5 10 2 10 2" fill="#4CAF50"/>
-            </svg>
+          <div className="logo-container">
+            <div className="logo-main">
+              <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#1e3c72"/>
+                    <stop offset="100%" stopColor="#2563eb"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="50" cy="50" r="45" fill="url(#logoGradient)" stroke="#fff" strokeWidth="3"/>
+                <path d="M35 30 L65 30 L65 35 L60 35 L60 65 L55 65 L55 45 L45 45 L45 65 L40 65 L40 35 L35 35 Z" fill="white"/>
+                <circle cx="50" cy="25" r="8" fill="white"/>
+                <path d="M30 70 Q50 60 70 70" stroke="white" strokeWidth="3" fill="none"/>
+              </svg>
+            </div>
+            <div className="logo-pulse"></div>
           </div>
           <div className="university-info">
             <h1>MEDITRACK</h1>
             <p>Medical Records Management System</p>
+            <div className="tagline">Secure • Efficient • Reliable</div>
           </div>
         </div>
       </div>
@@ -55,8 +67,20 @@ const LoginForm: React.FC = () => {
       <div className="login-container">
         <div className="login-card">
           <div className="login-header-card">
-            <h2>Student Portal Login</h2>
-            <p>Enter your credentials to access the system</p>
+            <div className="card-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                <path d="M12 1L21 5V11C21 16.55 17.16 21.74 12 23C6.84 21.74 3 16.55 3 11V5L12 1Z" fill="url(#cardGradient)" stroke="#1e3c72" strokeWidth="1"/>
+                <defs>
+                  <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#e3f2fd"/>
+                    <stop offset="100%" stopColor="#bbdefb"/>
+                  </linearGradient>
+                </defs>
+                <path d="M9 12L11 14L15 10" stroke="#1e3c72" strokeWidth="2" fill="none"/>
+              </svg>
+            </div>
+            <h2>Secure Access Portal</h2>
+            <p>Enter your credentials to access the medical records system</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -132,10 +156,6 @@ const LoginForm: React.FC = () => {
               )}
             </button>
           </form>
-
-          <div className="login-footer">
-            <button type="button" className="forgot-password">Forgot your password?</button>
-          </div>
         </div>
       </div>
 
