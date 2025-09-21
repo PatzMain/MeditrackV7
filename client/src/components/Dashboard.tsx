@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { userService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { userService } from '../services/api.ts';
 import './Dashboard.css';
 
 interface Activity {

@@ -1,7 +1,7 @@
 import React from 'react';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import LoginForm from './components/LoginForm';
-import Dashboard from './components/Dashboard';
+import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
+import LoginForm from './components/LoginForm.tsx';
+import Dashboard from './components/Dashboard.tsx';
 import './App.css';
 
 const AppContent: React.FC = () => {
