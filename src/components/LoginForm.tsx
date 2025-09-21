@@ -31,37 +31,59 @@ const LoginForm: React.FC = () => {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-form">
-        <h2>Meditrack Login</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Username:</label>
-            <input
-              type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-left">
+          <div className="brand-section">
+            <h1 className="brand-title">meditrack</h1>
+            <p className="brand-subtitle">
+              Connect with healthcare professionals and manage your medical records securely.
+            </p>
           </div>
-          <div className="form-group">
-            <label htmlFor="password">Password:</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+        </div>
+
+        <div className="login-right">
+          <div className="login-card">
+            <form onSubmit={handleSubmit} className="login-form">
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                disabled={isLoading}
+                className="form-input"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                className="form-input"
+              />
+
+              {error && <div className="error-alert">{error}</div>}
+
+              <button type="submit" disabled={isLoading} className="login-btn">
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+
+            <div className="demo-accounts">
+              <div className="demo-title">Demo Accounts:</div>
+              <div className="demo-list">
+                <div className="demo-item">
+                  <strong>Admin:</strong> admin / admin123
+                </div>
+                <div className="demo-item">
+                  <strong>Superadmin:</strong> superadmin / superadmin123
+                </div>
+              </div>
+            </div>
           </div>
-          {error && <div className="error-message">{error}</div>}
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+        </div>
       </div>
     </div>
   );
