@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService, User } from '../services/api.ts';
+import { authService, User, activityService } from '../services/supabaseService';
 
 interface AuthContextType {
   user: User | null;
@@ -27,15 +27,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = () => {
-      const savedUser = authService.getCurrentUser();
-      if (savedUser && authService.isAuthenticated()) {
-        setUser(savedUser);
+    const initAuth = async () => {
+      try {
+        const userProfile = await authService.getCurrentUser();
+        if (userProfile) {
+          setUser(userProfile);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     initAuth();
+
+    // Listen to auth state changes
+    const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        try {
+          const userProfile = await authService.getCurrentUser();
+          if (userProfile) {
+            setUser(userProfile);
+          }
+        } catch (error) {
+          console.error('Failed to get user profile on sign in:', error);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const login = async (username: string, password: string) => {
@@ -44,13 +69,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
       setUser(response.user);
+
+      // Log login activity
+      await activityService.logActivity({
+        action: 'login',
+        category: 'authentication',
+        description: `User ${username} logged in`,
+        severity: 'info'
+      });
     } catch (error) {
       throw error;
     }
   };
 
   const logout = async () => {
+    const currentUser = user;
     try {
+      // Log logout activity before clearing user data
+      if (currentUser) {
+        await activityService.logActivity({
+          action: 'logout',
+          category: 'authentication',
+          description: `User ${currentUser.username} logged out`,
+          severity: 'info'
+        });
+      }
+
       await authService.logout();
       setUser(null);
     } catch (error) {

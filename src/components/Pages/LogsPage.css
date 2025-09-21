@@ -1,0 +1,131 @@
+/* Logs Page Specific Styles */
+.log-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.logs-table-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+.log-row {
+  transition: all 0.2s ease;
+}
+
+.log-row.severity-warning {
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.log-row.severity-error {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.timestamp-cell {
+  font-family: 'Courier New', monospace;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.875rem;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: capitalize;
+}
+
+.action-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #374151;
+  font-family: 'Courier New', monospace;
+}
+
+.log-description {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 300px;
+}
+
+.description-text {
+  font-size: 0.875rem;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.description-details {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-family: 'Courier New', monospace;
+}
+
+.ip-address {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.severity-cell {
+  text-align: center;
+}
+
+.severity-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.severity-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.severity-text.info {
+  color: #2563eb;
+}
+
+.severity-text.warning {
+  color: #d97706;
+}
+
+.severity-text.error {
+  color: #dc2626;
+}
+
+.severity-info {
+  color: #2563eb;
+}
+
+.severity-warning {
+  color: #d97706;
+}
+
+.severity-error {
+  color: #dc2626;
+}

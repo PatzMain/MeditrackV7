@@ -152,4 +152,43 @@ router.post('/logout', authenticateToken, async (req, res) => {
   }
 });
 
+router.post('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const { userId } = req.user;
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('password')
+      .eq('id', userId)
+      .single();
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid user' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid current password' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ password: hashedPassword })
+      .eq('id', userId);
+
+    if (updateError) {
+      return res.status(500).json({ error: 'Failed to update password' });
+    }
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

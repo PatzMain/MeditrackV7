@@ -1,0 +1,237 @@
+/* Inventory Page Specific Styles */
+.inventory-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 24px;
+}
+
+.inventory-sidebar {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.inventory-main {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.department-tabs {
+  margin-bottom: 24px;
+}
+
+.department-tab {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  color: #4b5563;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  margin-bottom: 12px;
+}
+
+.department-tab:hover {
+  background: #e5e7eb;
+}
+
+.department-tab.active {
+  background: #1e3a8a;
+  color: #ffffff;
+}
+
+.classification-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.classification-tab {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #4b5563;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.classification-tab:hover {
+  background: #f3f4f6;
+  color: #1e3a8a;
+}
+
+.classification-tab.active {
+  background: #dbeafe;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.page-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.search-box {
+  flex-grow: 1;
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 16px 12px 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+}
+
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.filter-select {
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.data-table {
+  overflow-x: auto;
+}
+
+.data-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  padding: 16px;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+  background-color: #f3f4f6;
+  border-bottom: 2px solid #e5e7eb;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.data-table th:hover {
+  background-color: #e5e7eb;
+}
+
+.data-table td {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover td {
+  background-color: #f9fafb;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge.available {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.low-stock {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.out-of-stock {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.expired {
+  background-color: #fecaca;
+  color: #991b1b;
+}
+
+.status-badge.discontinued {
+  background-color: #e5e7eb;
+  color: #4b5563;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  padding: 8px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-icon:hover {
+  background-color: #e5e7eb;
+  color: #1e3a8a;
+}
+
+.btn-icon.danger:hover {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.loading-message, .error-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
+  font-size: 1.125rem;
+  color: #6b7280;
+}
+
+.error-container {
+  flex-direction: column;
+  gap: 16px;
+}

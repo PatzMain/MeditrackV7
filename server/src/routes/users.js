@@ -9,7 +9,7 @@ router.get('/activity', authenticateToken, requireRole(['admin', 'superadmin']),
     const { data: activities, error } = await supabase
       .from('user_activity')
       .select(`
-        *,
+        id, user_id, action, category, description, timestamp, user_agent, severity, details,
         users (username, role)
       `)
       .order('timestamp', { ascending: false });
