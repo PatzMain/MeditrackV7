@@ -134,7 +134,7 @@ const LoginForm: React.FC = () => {
           </form>
 
           <div className="login-footer">
-            <a href="#" className="forgot-password">Forgot your password?</a>
+            <button type="button" className="forgot-password">Forgot your password?</button>
           </div>
         </div>
       </div>
