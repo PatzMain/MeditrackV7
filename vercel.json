@@ -1,5 +1,4 @@
 {
-  "name": "meditrack",
   "version": 2,
   "builds": [
     {
@@ -24,12 +23,6 @@
       "dest": "/client/build/$1"
     }
   ],
-  "env": {
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-    "JWT_SECRET": "@jwt_secret"
-  },
   "installCommand": "cd client && npm install && cd ../api && npm install",
   "buildCommand": "cd client && npm run build"
 }
