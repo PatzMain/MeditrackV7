@@ -9,7 +9,7 @@ const app = express();
 
 app.use(cors({
   origin: [
-    'https://meditrack.vercel.app',
+    'https://meditrack-app.vercel.app',
     'http://localhost:3000'
   ],
   credentials: true

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL ||
   (process.env.NODE_ENV === 'production'
-    ? 'https://meditrack.vercel.app/api'
+    ? 'https://meditrack-app.vercel.app/api'
     : 'http://localhost:5000/api');
 
 export const api = axios.create({
