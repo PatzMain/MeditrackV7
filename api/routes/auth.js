@@ -83,9 +83,10 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
+    // Optimize: Only select needed fields for faster query
     const { data: user, error } = await supabase
       .from('users')
-      .select('*')
+      .select('id, username, password, role')
       .eq('username', username)
       .single();
 

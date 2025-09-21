@@ -1,178 +1,46 @@
-# Meditrack - PERN Stack Authentication System
+# Getting Started with Create React App
 
-A full-stack web application built with PostgreSQL, Express.js, React, and Node.js (PERN stack) featuring user authentication and activity logging using Supabase.
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Features
+## Available Scripts
 
-- **User Authentication**: Login/logout with username and password
-- **Role-based Access Control**: Support for user, admin, and superadmin roles
-- **Activity Logging**: Tracks user login/logout activities with timestamps and IP addresses
-- **Admin Dashboard**: View user activity logs (admin and superadmin only)
-- **Secure Backend**: JWT-based authentication with bcrypt password hashing
+In the project directory, you can run:
 
-## Tech Stack
+### `npm start`
 
-- **Frontend**: React with TypeScript
-- **Backend**: Node.js with Express.js
-- **Database**: PostgreSQL via Supabase
-- **Authentication**: JWT tokens with bcrypt
-- **Styling**: Custom CSS
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
-## Setup Instructions
+The page will reload if you make edits.\
+You will also see any lint errors in the console.
 
-### Prerequisites
+### `npm test`
 
-- Node.js (v14 or higher)
-- npm or yarn
-- Supabase account
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-### 1. Clone the Repository
+### `npm run build`
 
-```bash
-git clone https://github.com/PatzMain/MeditrackV7.git
-cd MeditrackV7
-```
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
 
-### 2. Set up Supabase
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
 
-1. Create a new project at [Supabase](https://supabase.com)
-2. Go to the SQL Editor and run the schema from `server/database/schema.sql`
-3. Get your project URL and service role key from the API settings
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-### 3. Configure Environment Variables
+### `npm run eject`
 
-#### Server Configuration
-Copy `server/.env.example` to `server/.env` and fill in your Supabase credentials:
+**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
 
-```env
-SUPABASE_URL=your_supabase_url_here
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
-JWT_SECRET=your_jwt_secret_here
-PORT=5000
-```
+If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-#### Client Configuration
-Copy `client/.env.example` to `client/.env`:
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
 
-```env
-REACT_APP_API_URL=http://localhost:5000/api
-```
+You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
 
-### 4. Install Dependencies
+## Learn More
 
-```bash
-# Install server dependencies
-cd server
-npm install
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
-# Install client dependencies
-cd ../client
-npm install
-```
-
-### 5. Create Default Users
-
-Run the user creation script to set up admin and superadmin accounts:
-
-```bash
-cd server
-node scripts/createUsers.js
-```
-
-This creates:
-- **Admin**: username=`admin`, password=`admin123`
-- **Superadmin**: username=`superadmin`, password=`superadmin123`
-
-**Important**: Change these passwords after first login!
-
-### 6. Start the Application
-
-#### Start the Backend Server
-```bash
-cd server
-npm run dev
-```
-
-#### Start the Frontend (in a new terminal)
-```bash
-cd client
-npm start
-```
-
-The application will be available at:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register a new user
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-
-### Users
-- `GET /api/users/profile` - Get current user profile
-- `GET /api/users/activity` - Get user activity logs (admin/superadmin only)
-
-## Database Schema
-
-### Users Table
-- `id` - Primary key
-- `username` - Unique username
-- `password` - Hashed password
-- `role` - User role (user, admin, superadmin)
-- `created_at` - Account creation timestamp
-
-### User Activity Table
-- `id` - Primary key
-- `user_id` - Foreign key to users table
-- `action` - Action performed (login, logout, register)
-- `timestamp` - When the action occurred
-- `ip_address` - User's IP address
-
-## Default Credentials
-
-After running the setup script, you can log in with:
-
-- **Admin**: `admin` / `admin123`
-- **Superadmin**: `superadmin` / `superadmin123`
-
-## Security Features
-
-- Password hashing with bcrypt
-- JWT-based authentication
-- Role-based access control
-- Activity logging with IP tracking
-- CORS protection
-- Input validation
-
-## Development
-
-### Running in Development Mode
-
-```bash
-# Backend with nodemon
-cd server
-npm run dev
-
-# Frontend with hot reload
-cd client
-npm start
-```
-
-### Database Management
-
-All database operations are handled through Supabase. The schema is defined in `server/database/schema.sql`.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is licensed under the ISC License.
+To learn React, check out the [React documentation](https://reactjs.org/).

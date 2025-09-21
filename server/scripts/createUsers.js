@@ -17,42 +17,40 @@ async function createUsers() {
     const adminPassword = await bcrypt.hash('admin123', 10);
     const superadminPassword = await bcrypt.hash('superadmin123', 10);
 
-    const { data: adminUser, error: adminError } = await supabase
+    // Update admin user with optimized password
+    const { error: adminError } = await supabase
       .from('users')
-      .insert([
+      .upsert([
         {
           username: 'admin',
           password: adminPassword,
           role: 'admin',
           created_at: new Date().toISOString()
         }
-      ])
-      .select()
-      .single();
+      ]);
 
     if (adminError) {
-      console.error('Error creating admin user:', adminError);
+      console.error('Error updating admin user:', adminError);
     } else {
-      console.log('Admin user created successfully:', adminUser.username);
+      console.log('Admin user updated with optimized password');
     }
 
-    const { data: superadminUser, error: superadminError } = await supabase
+    // Update superadmin user with optimized password
+    const { error: superadminError } = await supabase
       .from('users')
-      .insert([
+      .upsert([
         {
           username: 'superadmin',
           password: superadminPassword,
           role: 'superadmin',
           created_at: new Date().toISOString()
         }
-      ])
-      .select()
-      .single();
+      ]);
 
     if (superadminError) {
-      console.error('Error creating superadmin user:', superadminError);
+      console.error('Error updating superadmin user:', superadminError);
     } else {
-      console.log('Superadmin user created successfully:', superadminUser.username);
+      console.log('Superadmin user updated with optimized password');
     }
 
     console.log('\nDefault user credentials:');
