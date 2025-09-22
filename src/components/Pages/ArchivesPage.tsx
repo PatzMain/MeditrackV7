@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { medicalRecordService, consultationService, inventoryService, activityService } from '../../services/supabaseService';
+import { inventoryService, activityService } from '../../services/supabaseService';
 import './ArchivesPage.css';
 import './PagesStyles.css';
 import ViewArchiveModal from '../Modals/ViewArchiveModal';
@@ -9,7 +9,6 @@ import DeleteArchiveModal from '../Modals/DeleteArchiveModal';
 const ArchivesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [archives, setArchives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,61 +16,28 @@ const ArchivesPage: React.FC = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [sortField, setSortField] = useState<string>('archivedDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const fetchArchives = async () => {
     try {
       setLoading(true);
-      const [medicalRecords, consultations, inventoryItems] = await Promise.all([
-        medicalRecordService.getMedicalRecords(),
-        consultationService.getConsultations(),
-        inventoryService.getArchivedItems(),
-      ]);
+      const inventoryItems = await inventoryService.getArchivedItems();
 
-      // Transform data to unified archive format
-      const archiveData = [
-        ...medicalRecords.map(record => ({
-          id: `mr_${record.id}`,
-          type: record.record_type === 'lab_result' ? 'Lab Report' :
-                record.record_type === 'prescription' ? 'Prescription' :
-                record.record_type === 'imaging' ? 'Imaging' :
-                record.record_type === 'procedure' ? 'Procedure' : 'Medical Record',
-          title: record.title,
-          description: record.description,
-          archivedDate: new Date(record.created_at).toISOString().split('T')[0],
-          originalDate: new Date(record.created_at).toISOString().split('T')[0],
-          size: '1.2 MB', // Placeholder since we don't have file size
-          category: 'Medical Records',
-          status: 'Archived',
-          patientName: record.patients ? `${record.patients.first_name} ${record.patients.last_name}` : 'Unknown',
-          createdBy: record.users ? record.users.username : 'Unknown'
-        })),
-        ...consultations.map(consultation => ({
-          id: `cons_${consultation.id}`,
-          type: 'Consultation',
-          title: `Consultation - ${consultation.patients ? `${consultation.patients.first_name} ${consultation.patients.last_name}` : 'Unknown Patient'}`,
-          description: `${consultation.symptoms} - ${consultation.diagnosis || 'Pending diagnosis'}`,
-          archivedDate: new Date(consultation.created_at).toISOString().split('T')[0],
-          originalDate: new Date(consultation.consultation_date).toISOString().split('T')[0],
-          size: '856 KB', // Placeholder
-          category: 'Consultations',
-          status: 'Archived',
-          patientName: consultation.patients ? `${consultation.patients.first_name} ${consultation.patients.last_name}` : 'Unknown',
-          createdBy: consultation.users ? consultation.users.username : 'Unknown'
-        })),
-        ...inventoryItems.map(item => ({
-          id: `inv_${item.id}`,
-          type: 'Inventory Item',
-          title: item.generic_name,
-          description: item.notes,
-          archivedDate: new Date(item.updated_at).toISOString().split('T')[0],
-          originalDate: new Date(item.created_at).toISOString().split('T')[0],
-          size: 'N/A',
-          category: 'Inventory',
-          status: 'Archived',
-          patientName: 'N/A',
-          createdBy: 'N/A'
-        }))
-      ];
+      // Transform data to unified archive format - only inventory items
+      const archiveData = inventoryItems.map(item => ({
+        id: `inv_${item.id}`,
+        type: 'Inventory Item',
+        title: item.generic_name,
+        description: item.notes || 'No description',
+        archivedDate: new Date(item.updated_at || item.created_at).toISOString().split('T')[0],
+        originalDate: new Date(item.created_at).toISOString().split('T')[0],
+        size: 'N/A',
+        category: 'Inventory',
+        status: 'Archived',
+        patientName: 'N/A',
+        createdBy: 'System'
+      }));
 
       setArchives(archiveData);
       setError(null);
@@ -87,16 +53,46 @@ const ArchivesPage: React.FC = () => {
     fetchArchives();
   }, []);
 
-  const categories = ['all', 'Medical Records', 'Consultations', 'Laboratory', 'Inventory', 'Equipment', 'Financial', 'HR'];
+  const categories = ['all', 'Inventory', 'Equipment', 'Supplies', 'System'];
 
-  const filteredArchives = archives.filter(archive => {
-    const matchesSearch = archive.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         archive.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         archive.patientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || archive.category === filterType;
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
-    return matchesSearch && matchesType;
-  });
+  const sortData = (data: any[]) => {
+    return [...data].sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+
+      // Handle different data types
+      if (sortField === 'archivedDate' || sortField === 'originalDate') {
+        aVal = new Date(aVal);
+        bVal = new Date(bVal);
+      } else if (typeof aVal === 'string') {
+        aVal = (aVal || '').toLowerCase();
+        bVal = (bVal || '').toLowerCase();
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const filteredArchives = sortData(
+    archives.filter(archive => {
+      const matchesSearch = (archive.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (archive.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = filterType === 'all' || archive.category === filterType;
+
+      return matchesSearch && matchesType;
+    })
+  );
 
   const handleExport = () => {
     console.log('Exporting archive data...');
@@ -106,13 +102,32 @@ const ArchivesPage: React.FC = () => {
   const handleRestoreItem = async () => {
     if (!selectedItem) return;
     try {
-      const id = selectedItem.id.split('_')[1];
-      await inventoryService.updateItem(id, { status: 'available' });
-      activityService.logActivity({ action: 'restore', description: `Restored item: ${selectedItem.title}` });
-      fetchArchives();
+      const id = parseInt(selectedItem.id.split('_')[1]);
+
+      // Update the item status to make it available again
+      await inventoryService.updateItem(id, {
+        status: 'available',
+        updated_at: new Date().toISOString()
+      });
+
+      // Log the activity
+      await activityService.logActivity({
+        action: 'restore',
+        description: `Restored item: ${selectedItem.title}`,
+        category: 'inventory'
+      });
+
+      // Refresh the archives list
+      await fetchArchives();
       setIsRestoreModalOpen(false);
+      setSelectedItem(null);
+
+      // Show success message (you could add a toast notification here)
+      console.log('Item restored successfully');
     } catch (error) {
       console.error('Error restoring item:', error);
+      // Show error message (you could add a toast notification here)
+      alert('Failed to restore item. Please try again.');
     }
   };
 
@@ -163,22 +178,6 @@ const ArchivesPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="date-range-group">
-            <label>Archived Date Range:</label>
-            <input
-              type="date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
-              placeholder="Start Date"
-            />
-            <span>to</span>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
-              placeholder="End Date"
-            />
-          </div>
 
           <button className="btn-secondary" onClick={handleExport}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -229,14 +228,28 @@ const ArchivesPage: React.FC = () => {
           <table>
             <thead>
               <tr>
-                <th>Type</th>
-                <th>Title & Description</th>
-                <th>Patient</th>
-                <th>Category</th>
-                <th>Original Date</th>
-                <th>Archived Date</th>
+                <th className="sortable" onClick={() => handleSort('type')}>
+                  Type {sortField === 'type' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('title')}>
+                  Title & Description {sortField === 'title' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('patientName')}>
+                  Patient {sortField === 'patientName' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('category')}>
+                  Category {sortField === 'category' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('originalDate')}>
+                  Original Date {sortField === 'originalDate' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('archivedDate')}>
+                  Archived Date {sortField === 'archivedDate' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
                 <th>Size</th>
-                <th>Status</th>
+                <th className="sortable" onClick={() => handleSort('status')}>
+                  Status {sortField === 'status' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -264,7 +277,7 @@ const ArchivesPage: React.FC = () => {
                   </td>
                   <td>{archive.patientName}</td>
                   <td>
-                    <span className={`category-badge ${archive.category.toLowerCase().replace(' ', '-')}`}>
+                    <span className={`category-badge ${(archive.category || '').toLowerCase().replace(' ', '-')}`}>
                       {archive.category}
                     </span>
                   </td>
@@ -272,7 +285,7 @@ const ArchivesPage: React.FC = () => {
                   <td>{archive.archivedDate}</td>
                   <td>{archive.size}</td>
                   <td>
-                    <span className={`status-badge ${archive.status.toLowerCase()}`}>
+                    <span className={`status-badge ${(archive.status || '').toLowerCase()}`}>
                       {archive.status}
                     </span>
                   </td>

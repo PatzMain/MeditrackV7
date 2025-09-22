@@ -87,7 +87,7 @@ const InventoryPage: React.FC = () => {
   const sortedAndFilteredItems = useMemo(() => {
     let items = inventoryData.filter(item => {
       const searchLower = searchQuery.toLowerCase();
-      const nameMatch = (item.generic_name?.toLowerCase().includes(searchLower) || item.brand_name?.toLowerCase().includes(searchLower));
+      const nameMatch = ((item.generic_name || '').toLowerCase().includes(searchLower) || (item.brand_name || '').toLowerCase().includes(searchLower));
       const statusMatch = statusFilter === 'all' || item.status === statusFilter;
       return nameMatch && statusMatch;
     });
@@ -148,7 +148,7 @@ const InventoryPage: React.FC = () => {
       case 'expired': return 'status-badge expired';
       case 'out_of_stock': return 'status-badge out-of-stock';
       case 'low_stock': return 'status-badge low-stock';
-      case 'discontinued': return 'status-badge discontinued';
+      case 'maintenance': return 'status-badge maintenance';
       default: return 'status-badge available';
     }
   };
@@ -158,6 +158,7 @@ const InventoryPage: React.FC = () => {
       <table>
         <thead>
           <tr>
+            <th onClick={() => handleSort('code')}>Code {sortColumn === 'code' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
             <th onClick={() => handleSort('generic_name')}>Generic Name {sortColumn === 'generic_name' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
             <th onClick={() => handleSort('brand_name')}>Brand Name {sortColumn === 'brand_name' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
             <th onClick={() => handleSort('category')}>Category {sortColumn === 'category' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
@@ -170,6 +171,7 @@ const InventoryPage: React.FC = () => {
         <tbody>
           {sortedAndFilteredItems.map((item) => (
             <tr key={item.id}>
+              <td>{item.code}</td>
               <td>{item.generic_name}</td>
               <td>{item.brand_name}</td>
               <td>{item.category}</td>

@@ -8,12 +8,13 @@ const LogsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterUser, setFilterUser] = useState('all');
   const [filterAction, setFilterAction] = useState('all');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [sortField, setSortField] = useState<string>('timestamp');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -36,16 +37,50 @@ const LogsPage: React.FC = () => {
   const users = ['all', ...Array.from(new Set(logs.map(log => log.users?.username || 'Unknown')))];
   const actions = ['all', ...Array.from(new Set(logs.map(log => log.action)))];
 
-  const filteredLogs = logs.filter(log => {
-    const userName = log.users?.username || 'Unknown';
-    const matchesSearch = log.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.category?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesUser = filterUser === 'all' || userName === filterUser;
-    const matchesAction = filterAction === 'all' || log.action === filterAction;
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
-    return matchesSearch && matchesUser && matchesAction;
-  });
+  const sortData = (data: any[]) => {
+    return [...data].sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+
+      // Handle different data types
+      if (sortField === 'timestamp') {
+        aVal = new Date(aVal);
+        bVal = new Date(bVal);
+      } else if (sortField === 'user') {
+        aVal = (a.users?.username || 'Unknown').toLowerCase();
+        bVal = (b.users?.username || 'Unknown').toLowerCase();
+      } else if (typeof aVal === 'string') {
+        aVal = (aVal || '').toLowerCase();
+        bVal = (bVal || '').toLowerCase();
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const filteredLogs = sortData(
+    logs.filter(log => {
+      const userName = log.users?.username || 'Unknown';
+      const matchesSearch = (log.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (log.category || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesUser = filterUser === 'all' || userName === filterUser;
+      const matchesAction = filterAction === 'all' || log.action === filterAction;
+
+      return matchesSearch && matchesUser && matchesAction;
+    })
+  );
 
   const handleExportLogs = () => {
     console.log('Exporting logs...');
@@ -141,20 +176,6 @@ const LogsPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="date-range-group">
-            <label>Date Range:</label>
-            <input
-              type="datetime-local"
-              value={dateRange.start}
-              onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
-            />
-            <span>to</span>
-            <input
-              type="datetime-local"
-              value={dateRange.end}
-              onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
-            />
-          </div>
 
           <button className="btn-secondary" onClick={handleExportLogs}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -201,12 +222,24 @@ const LogsPage: React.FC = () => {
           <table>
             <thead>
               <tr>
-                <th>Timestamp</th>
-                <th>User</th>
-                <th>Action</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Severity</th>
+                <th className="sortable" onClick={() => handleSort('timestamp')}>
+                  Timestamp {sortField === 'timestamp' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('user')}>
+                  User {sortField === 'user' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('action')}>
+                  Action {sortField === 'action' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('category')}>
+                  Category {sortField === 'category' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('description')}>
+                  Description {sortField === 'description' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('severity')}>
+                  Severity {sortField === 'severity' && (sortDirection === 'asc' ? '▲' : '▼')}
+                </th>
                 <th>Actions</th>
               </tr>
             </thead>

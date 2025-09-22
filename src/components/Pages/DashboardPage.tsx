@@ -1,53 +1,41 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { patientService, consultationService, inventoryService } from '../../services/supabaseService';
+import { inventoryService } from '../../services/supabaseService';
 import './DashboardPage.css';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
 const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState({
-    totalPatients: 0,
-    activeCases: 0,
-    todayAppointments: 0,
+    totalItems: 0,
+    lowStockItems: 0,
+    totalCategories: 0,
     criticalAlerts: 0
   });
-  const [patientTrends, setPatientTrends] = useState<any[]>([]);
-  const [consultationsChartData, setConsultationsChartData] = useState<any[]>([]);
+  const [inventoryTrends, setInventoryTrends] = useState<any[]>([]);
   const [inventoryStatusData, setInventoryStatusData] = useState<any[]>([]);
-  const [patientDemographicsData, setPatientDemographicsData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
 
-      const patients = await patientService.getPatients();
-      const consultations = await consultationService.getConsultations();
       const inventory = await inventoryService.getAllItems();
       const lowStockItems = inventory.filter((item: any) => item.stock_quantity <= item.minimum_stock_level);
-
-      const consultationsData = await consultationService.getConsultationsLast7Days();
-      setConsultationsChartData(consultationsData);
 
       const inventoryStatus = await inventoryService.getInventoryStatus();
       setInventoryStatusData(inventoryStatus);
 
-      const patientDemographics = await patientService.getPatientDemographics();
-      setPatientDemographicsData(patientDemographics);
-
-      const today = new Date().toISOString().split('T')[0];
-      const todayConsultations = consultations.filter((c: any) =>
-        c.consultation_date.startsWith(today)
-      );
+      // Get unique categories
+      const categories = Array.from(new Set(inventory.map((item: any) => item.classification)));
 
       setStats({
-        totalPatients: patients.length,
-        activeCases: consultations.length,
-        todayAppointments: todayConsultations.length,
+        totalItems: inventory.length,
+        lowStockItems: lowStockItems.length,
+        totalCategories: categories.length,
         criticalAlerts: lowStockItems.length
       });
 
-      const weekTrends = generateWeeklyTrends(patients);
-      setPatientTrends(weekTrends);
+      const weekTrends = generateWeeklyTrends();
+      setInventoryTrends(weekTrends);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -60,11 +48,11 @@ const DashboardPage: React.FC = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const generateWeeklyTrends = (patients: any[]) => {
+  const generateWeeklyTrends = () => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const trends = days.map(day => ({
       day,
-      count: Math.floor(Math.random() * 15) + 5
+      count: Math.floor(Math.random() * 20) + 10
     }));
     return trends;
   };
@@ -79,24 +67,23 @@ const DashboardPage: React.FC = () => {
 
   const statCards = [
     {
-      title: 'Total Patients',
-      value: stats.totalPatients.toString(),
-      change: '+12%',
+      title: 'Total Items',
+      value: stats.totalItems.toString(),
+      change: `${stats.totalCategories} categories`,
       changeType: 'positive',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2"/>
-          <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-          <path d="M23 21V19C23 18.1645 22.7155 17.3541 22.2094 16.7001C21.7033 16.046 20.9066 15.5902 20 15.4" stroke="currentColor" strokeWidth="2"/>
-          <path d="M16 3.13C16.9066 3.28984 17.7033 3.74595 18.2094 4.39993C18.7155 5.05392 19 5.86447 19 6.7C19 7.53553 18.7155 8.34608 18.2094 9.00007C17.7033 9.65405 16.9066 10.1102 16 10.27" stroke="currentColor" strokeWidth="2"/>
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+          <rect x="7" y="7" width="3" height="9" stroke="currentColor" strokeWidth="2"/>
+          <rect x="14" y="7" width="3" height="5" stroke="currentColor" strokeWidth="2"/>
         </svg>
       )
     },
     {
-      title: 'Active Cases',
-      value: stats.activeCases.toString(),
-      change: '+8%',
-      changeType: 'positive',
+      title: 'Low Stock Items',
+      value: stats.lowStockItems.toString(),
+      change: stats.lowStockItems > 0 ? 'Needs attention' : 'All good',
+      changeType: stats.lowStockItems > 0 ? 'warning' : 'positive',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" strokeWidth="2"/>
@@ -104,10 +91,10 @@ const DashboardPage: React.FC = () => {
       )
     },
     {
-      title: 'Appointments Today',
-      value: stats.todayAppointments.toString(),
-      change: stats.todayAppointments > 0 ? '+' + stats.todayAppointments : '0',
-      changeType: stats.todayAppointments > 0 ? 'positive' : 'neutral',
+      title: 'Categories',
+      value: stats.totalCategories.toString(),
+      change: 'Organized',
+      changeType: 'positive',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
@@ -120,7 +107,7 @@ const DashboardPage: React.FC = () => {
     {
       title: 'Critical Alerts',
       value: stats.criticalAlerts.toString(),
-      change: stats.criticalAlerts > 0 ? 'Low Stock Items' : 'All Good',
+      change: stats.criticalAlerts > 0 ? 'Requires action' : 'All Good',
       changeType: stats.criticalAlerts > 0 ? 'warning' : 'positive',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -159,10 +146,10 @@ const DashboardPage: React.FC = () => {
       <div className="dashboard-grid">
         <div className="dashboard-card chart-card">
           <div className="card-header">
-            <h3>Patient Registration Trends</h3>
+            <h3>Inventory Usage Trends</h3>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={patientTrends}>
+            <LineChart data={inventoryTrends}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="day" />
               <YAxis />
@@ -170,22 +157,6 @@ const DashboardPage: React.FC = () => {
               <Legend />
               <Line type="monotone" dataKey="count" stroke="#8884d8" activeDot={{ r: 8 }} />
             </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="dashboard-card chart-card">
-          <div className="card-header">
-            <h3>Consultations (Last 7 Days)</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={consultationsChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="consultations" fill="#82ca9d" />
-            </BarChart>
           </ResponsiveContainer>
         </div>
 
@@ -206,21 +177,6 @@ const DashboardPage: React.FC = () => {
           </ResponsiveContainer>
         </div>
 
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h3>Patient Demographics</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie data={patientDemographicsData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
-                <Cell fill="#8884d8" />
-                <Cell fill="#82ca9d" />
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
       </div>
     </div>
   );

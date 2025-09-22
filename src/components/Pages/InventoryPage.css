@@ -48,6 +48,59 @@
   color: #ffffff;
 }
 
+/* Responsive Design for Inventory Page */
+@media (max-width: 1024px) {
+  .inventory-layout {
+    grid-template-columns: 200px 1fr;
+    gap: 16px;
+  }
+
+  .inventory-sidebar,
+  .inventory-main {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .inventory-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .inventory-sidebar {
+    order: 2;
+    padding: 12px;
+  }
+
+  .inventory-main {
+    order: 1;
+    padding: 12px;
+  }
+
+  .department-tabs {
+    margin-bottom: 16px;
+  }
+
+  .department-tab {
+    padding: 10px 12px;
+    font-size: 0.875rem;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .inventory-sidebar,
+  .inventory-main {
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .department-tab {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+}
+
 .classification-tabs {
   display: flex;
   flex-direction: column;

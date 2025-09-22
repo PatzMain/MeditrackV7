@@ -1,0 +1,146 @@
+/* Loading Spinner Styles */
+.loading-spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px;
+}
+
+.loading-spinner-container.inline {
+  flex-direction: row;
+  padding: 8px;
+  gap: 8px;
+}
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner.small .spinner {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+.loading-spinner.medium .spinner {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+.loading-spinner.large .spinner {
+  width: 48px;
+  height: 48px;
+  border-width: 4px;
+}
+
+.spinner {
+  border: 3px solid rgba(30, 60, 114, 0.1);
+  border-top: 3px solid #1e3c72;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+  text-align: center;
+}
+
+.loading-spinner-container.inline .loading-text {
+  font-size: 0.8rem;
+}
+
+/* Loading states for different contexts */
+.table-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  margin: 20px 0;
+}
+
+.card-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80px 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.page-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: #f8fafc;
+}
+
+/* Skeleton loading animation */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  display: inline-block;
+  height: 1em;
+  position: relative;
+  overflow: hidden;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+}
+
+.skeleton::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: skeleton-loading 2s infinite;
+  content: '';
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .loading-spinner-container {
+    padding: 20px;
+    gap: 12px;
+  }
+
+  .loading-text {
+    font-size: 0.8rem;
+  }
+
+  .table-loading,
+  .card-loading {
+    padding: 40px 15px;
+  }
+}

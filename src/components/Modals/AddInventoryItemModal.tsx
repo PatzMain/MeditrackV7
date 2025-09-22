@@ -40,6 +40,10 @@ const AddInventoryItemModal: React.FC<AddInventoryItemModalProps> = ({ onClose, 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="form-group">
+              <label htmlFor="code">Code</label>
+              <input type="text" id="code" name="code" onChange={handleChange} required />
+            </div>
+            <div className="form-group">
               <label htmlFor="generic_name">Generic Name</label>
               <input type="text" id="generic_name" name="generic_name" onChange={handleChange} required />
             </div>

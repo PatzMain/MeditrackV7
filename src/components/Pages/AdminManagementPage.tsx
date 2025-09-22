@@ -84,9 +84,9 @@ const AdminManagementPage: React.FC = () => {
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (user.first_name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                         (user.last_name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = (user.username || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (user.first_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (user.last_name || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });

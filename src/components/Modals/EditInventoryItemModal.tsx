@@ -44,6 +44,10 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="form-group">
+              <label htmlFor="code">Code</label>
+              <input type="text" id="code" name="code" value={formData.code || ''} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
               <label htmlFor="generic_name">Generic Name</label>
               <input type="text" id="generic_name" name="generic_name" value={formData.generic_name || ''} onChange={handleChange} required />
             </div>
