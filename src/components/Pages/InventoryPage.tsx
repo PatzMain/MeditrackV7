@@ -582,9 +582,10 @@ const InventoryPage: React.FC = () => {
                   <option value="active">Active</option>
                   <option value="low_stock">Low Stock</option>
                   <option value="out_of_stock">Out of Stock</option>
-                  <option value="expired">Expired</option>
-                  {activeTab === 'equipment' && (
+                  {activeTab === 'equipment' ? (
                     <option value="maintenance">Maintenance</option>
+                  ) : (
+                    <option value="expired">Expired</option>
                   )}
                 </select>
               </div>

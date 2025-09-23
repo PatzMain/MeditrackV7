@@ -51,10 +51,6 @@ const ViewInventoryItemModal: React.FC<ViewInventoryItemModalProps> = ({ item, o
               <label>Status</label>
               <span className={`status-badge ${item.status}`}>{item.status?.replace(/_/g, ' ')}</span>
             </div>
-            <div className="info-item">
-              <label>Minimum Stock Level</label>
-              <span>{item.minimum_stock_level}</span>
-            </div>
             {item.notes && (
               <div className="info-item full-width">
                 <label>Notes</label>

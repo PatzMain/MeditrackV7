@@ -22,6 +22,29 @@ const AddInventoryItemModal: React.FC<AddInventoryItemModalProps> = ({ onClose, 
     status: 'active'
   });
 
+  // Determine status options based on classification type
+  const getStatusOptions = () => {
+    const classificationType = activeClassificationTab || 'medicines';
+
+    if (classificationType === 'equipment') {
+      // Equipment: exclude 'expired' option
+      return [
+        { value: 'active', label: 'Active' },
+        { value: 'low_stock', label: 'Low Stock' },
+        { value: 'out_of_stock', label: 'Out of Stock' },
+        { value: 'maintenance', label: 'Maintenance' }
+      ];
+    } else {
+      // Other classifications (medicines, supplies): exclude 'maintenance' option
+      return [
+        { value: 'active', label: 'Active' },
+        { value: 'low_stock', label: 'Low Stock' },
+        { value: 'out_of_stock', label: 'Out of Stock' },
+        { value: 'expired', label: 'Expired' }
+      ];
+    }
+  };
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -78,21 +101,17 @@ const AddInventoryItemModal: React.FC<AddInventoryItemModalProps> = ({ onClose, 
               <input type="date" id="expiration_date" name="expiration_date" onChange={handleChange} />
             </div>
             <div className="form-group">
-              <label htmlFor="minimum_stock_level">Minimum Stock Level</label>
-              <input type="number" id="minimum_stock_level" name="minimum_stock_level" onChange={handleChange} />
-            </div>
-            <div className="form-group">
               <label htmlFor="notes">Notes</label>
               <textarea id="notes" name="notes" onChange={handleChange} placeholder="Additional notes or descriptions"></textarea>
             </div>
             <div className="form-group">
               <label htmlFor="status">Status</label>
               <select id="status" name="status" value={formData.status || 'active'} onChange={handleChange}>
-                <option value="active">Active</option>
-                <option value="low_stock">Low Stock</option>
-                <option value="out_of_stock">Out of Stock</option>
-                <option value="expired">Expired</option>
-                <option value="maintenance">Maintenance</option>
+                {getStatusOptions().map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

@@ -114,6 +114,12 @@
   margin-bottom: 2rem;
 }
 
+@media (max-width: 576px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+}
+
 .stat-card {
   background: #ffffff;
   border-radius: 16px;
@@ -317,6 +323,13 @@
   letter-spacing: 0.05em;
 }
 
+/* Chart Container for Responsive Design */
+.chart-container {
+  width: 100%;
+  height: 350px;
+  min-height: 300px;
+}
+
 /* Chart Styling Overrides */
 .recharts-wrapper {
   font-family: inherit;
@@ -445,6 +458,11 @@
   .summary-metric {
     font-size: 1.25rem;
   }
+
+  .chart-container {
+    height: 280px;
+    min-height: 250px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -485,6 +503,11 @@
 
   .summary-content {
     grid-template-columns: 1fr;
+  }
+
+  .chart-container {
+    height: 240px;
+    min-height: 200px;
   }
 }
 

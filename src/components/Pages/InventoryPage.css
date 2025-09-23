@@ -256,11 +256,15 @@
 }
 
 .table-actions {
+  align-items: left;
+  justify-content: left;
+  flex-wrap: wrap;
   display: flex;
   gap: 8px;
 }
 
 .btn-icon {
+  align-items: left;
   padding: 8px;
   border: none;
   background: transparent;

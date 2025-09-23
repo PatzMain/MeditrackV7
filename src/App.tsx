@@ -18,11 +18,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return (
       <div className="loading-container">
         <div className="loading-spinner">
-          <svg width="40" height="40" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="none" strokeDasharray="31.416" strokeDashoffset="31.416">
-              <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
-              <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
-            </circle>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10" opacity="0.25"/>
+            <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/>
           </svg>
           <span>Loading...</span>
         </div>
@@ -40,11 +38,9 @@ const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) 
     return (
       <div className="loading-container">
         <div className="loading-spinner">
-          <svg width="40" height="40" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="none" strokeDasharray="31.416" strokeDashoffset="31.416">
-              <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
-              <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
-            </circle>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10" opacity="0.25"/>
+            <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/>
           </svg>
           <span>Loading...</span>
         </div>

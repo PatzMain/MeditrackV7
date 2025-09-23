@@ -487,7 +487,10 @@
   }
 
   .table-actions {
+    align-items: left;
+    justify-content: left;
     flex-wrap: wrap;
+    display: flex;
     gap: 6px;
   }
 
@@ -713,7 +716,7 @@
     padding: 4px 8px;
     font-size: 0.75rem;
     width: 100%;
-    justify-content: center;
+    justify-content: left;
   }
 
   .status-badge,

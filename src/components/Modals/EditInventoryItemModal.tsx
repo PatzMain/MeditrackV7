@@ -19,6 +19,35 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
 
   if (!item) return null;
 
+  // Determine classification type from item data
+  const getClassificationType = () => {
+    const classification = classifications.find(c => c.id === item.classification_id);
+    return classification?.name?.toLowerCase() || 'medicines';
+  };
+
+  // Determine status options based on classification type
+  const getStatusOptions = () => {
+    const classificationType = getClassificationType();
+
+    if (classificationType === 'equipment') {
+      // Equipment: exclude 'expired' option
+      return [
+        { value: 'active', label: 'Active' },
+        { value: 'low_stock', label: 'Low Stock' },
+        { value: 'out_of_stock', label: 'Out of Stock' },
+        { value: 'maintenance', label: 'Maintenance' }
+      ];
+    } else {
+      // Other classifications (medicines, supplies): exclude 'maintenance' option
+      return [
+        { value: 'active', label: 'Active' },
+        { value: 'low_stock', label: 'Low Stock' },
+        { value: 'out_of_stock', label: 'Out of Stock' },
+        { value: 'expired', label: 'Expired' }
+      ];
+    }
+  };
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -72,10 +101,6 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
               <input type="date" id="expiration_date" name="expiration_date" value={formData.expiration_date || ''} onChange={handleChange} />
             </div>
             <div className="form-group">
-              <label htmlFor="minimum_stock_level">Minimum Stock Level</label>
-              <input type="number" id="minimum_stock_level" name="minimum_stock_level" value={formData.minimum_stock_level || 0} onChange={handleChange} />
-            </div>
-            <div className="form-group">
               <label htmlFor="maximum_stock_level">Maximum Stock Level</label>
               <input type="number" id="maximum_stock_level" name="maximum_stock_level" value={formData.maximum_stock_level || 0} onChange={handleChange} />
             </div>
@@ -86,11 +111,11 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
             <div className="form-group">
               <label htmlFor="status">Status</label>
               <select id="status" name="status" value={formData.status || 'active'} onChange={handleChange}>
-                <option value="active">Active</option>
-                <option value="low_stock">Low Stock</option>
-                <option value="out_of_stock">Out of Stock</option>
-                <option value="expired">Expired</option>
-                <option value="maintenance">Maintenance</option>
+                {getStatusOptions().map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

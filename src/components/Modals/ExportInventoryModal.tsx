@@ -82,8 +82,6 @@ const ExportInventoryModal: React.FC<ExportInventoryModalProps> = ({
     { key: 'stock_quantity', header: 'Stock Quantity', width: 15, formatter: (value) => value?.toString() || '0' },
     { key: 'unit_of_measurement', header: 'Unit', width: 12 },
     { key: 'expiration_date', header: 'Expiration Date', width: 20 },
-    { key: 'minimum_stock_level', header: 'Min Stock Level', width: 15, formatter: (value) => value?.toString() || '0' },
-    { key: 'maximum_stock_level', header: 'Max Stock Level', width: 15, formatter: (value) => value?.toString() || '0' },
     { key: 'status', header: 'Status', width: 15 },
     { key: 'notes', header: 'Notes', width: 30 },
     { key: 'created_at', header: 'Created Date', width: 20, formatter: (value) => value ? new Date(value).toLocaleDateString() : '' },

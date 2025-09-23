@@ -42,6 +42,27 @@
   padding: 2rem;
   border: 1px solid #e5e7eb;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-top: 2rem;
+}
+
+/* Section Header */
+.section-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.section-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.section-header p {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 /* Role and Status Badges */

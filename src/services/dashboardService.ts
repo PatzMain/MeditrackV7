@@ -1,4 +1,4 @@
-import { inventoryService } from './supabaseService';
+import { inventoryService, userService, activityService } from './supabaseService';
 
 export interface DashboardStats {
   totalItems: number;
@@ -10,8 +10,6 @@ export interface DashboardStats {
   activeDentalItems: number;
   totalCategories: number;
   totalUsers: number;
-  criticalAlerts: number;
-  totalValue: number;
 }
 
 export interface InventoryTrendData {
@@ -42,6 +40,7 @@ export interface StatusDistributionData {
   color: string;
   [key: string]: any;
 }
+
 
 export interface CategoryAnalysisData {
   category: string;
@@ -75,7 +74,6 @@ export interface TopPerformingCategories {
 export interface ExpirationAnalysisData {
   timeframe: string;
   expiringItems: number;
-  totalValue: number;
   categories: string[];
   [key: string]: any;
 }
@@ -85,12 +83,12 @@ class DashboardService {
     try {
       const [allItems, users] = await Promise.all([
         inventoryService.getAllItems(),
-        this.getUserStats()
+        userService.getUserStats()
       ]);
 
       const currentDate = new Date();
       const lowStockItems = allItems.filter((item: any) =>
-        item.stock_quantity <= item.minimum_stock_level && item.status === 'active'
+        item.status === 'low_stock'
       );
 
       const outOfStockItems = allItems.filter((item: any) =>
@@ -116,13 +114,6 @@ class DashboardService {
 
       const categories = Array.from(new Set(allItems.map((item: any) => item.category || 'Uncategorized')));
 
-      const criticalAlerts = lowStockItems.length + outOfStockItems.length + expiredItems.length;
-
-      // Calculate estimated total value (using stock_quantity as proxy)
-      const totalValue = allItems.reduce((sum: number, item: any) =>
-        sum + (item.stock_quantity || 0), 0
-      );
-
       return {
         totalItems: allItems.length,
         lowStockItems: lowStockItems.length,
@@ -132,9 +123,7 @@ class DashboardService {
         activeMedicalItems: medicalItems.length,
         activeDentalItems: dentalItems.length,
         totalCategories: categories.length,
-        totalUsers: users.totalUsers,
-        criticalAlerts,
-        totalValue
+        totalUsers: users.totalUsers
       };
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -163,7 +152,7 @@ class DashboardService {
         const medicalItems = itemsUpToDate.filter((item: any) => item.department === 'medical');
         const dentalItems = itemsUpToDate.filter((item: any) => item.department === 'dental');
         const lowStockItems = itemsUpToDate.filter((item: any) =>
-          item.stock_quantity <= item.minimum_stock_level
+          item.status === 'low_stock'
         );
         const expiredItems = itemsUpToDate.filter((item: any) => {
           if (!item.expiration_date) return false;
@@ -197,7 +186,7 @@ class DashboardService {
 
         const active = deptItems.filter((item: any) => item.status === 'active').length;
         const lowStock = deptItems.filter((item: any) =>
-          item.stock_quantity <= item.minimum_stock_level && item.status === 'active'
+          item.status === 'low_stock'
         ).length;
         const outOfStock = deptItems.filter((item: any) =>
           item.stock_quantity === 0 || item.status === 'out_of_stock'
@@ -257,6 +246,7 @@ class DashboardService {
       throw error;
     }
   }
+
 
   async getCategoryAnalysis(): Promise<CategoryAnalysisData[]> {
     try {
@@ -324,12 +314,10 @@ class DashboardService {
         }
 
         const categories = Array.from(new Set(filteredItems.map((item: any) => item.category || 'Uncategorized')));
-        const totalValue = filteredItems.reduce((sum: number, item: any) => sum + (item.stock_quantity || 0), 0);
 
         return {
           timeframe: timeframe.name,
           expiringItems: filteredItems.length,
-          totalValue,
           categories
         };
       });
@@ -339,19 +327,10 @@ class DashboardService {
     }
   }
 
-  private async getUserStats(): Promise<{ totalUsers: number; activeUsers: number }> {
-    // Mock user stats since we don't have direct user service access
-    // In a real implementation, this would fetch from users table
-    return {
-      totalUsers: 15,
-      activeUsers: 12
-    };
-  }
 
   async getActivityTrends(days: number = 30): Promise<ActivityTrendData[]> {
     try {
-      // Mock activity trends based on database schema
-      // In real implementation, this would query user_activity table
+      const activities = await activityService.getLogs();
       const currentDate = new Date();
       const trends: ActivityTrendData[] = [];
 
@@ -360,21 +339,38 @@ class DashboardService {
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split('T')[0];
 
-        // Generate realistic activity data
-        const baseActivity = Math.floor(Math.random() * 20) + 10;
-        const infoActions = Math.floor(baseActivity * 0.7);
-        const warningActions = Math.floor(baseActivity * 0.2);
-        const errorActions = Math.floor(baseActivity * 0.1);
+        // Get next day for filtering
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        // Filter activities for this specific day
+        const dayActivities = activities.filter((activity: any) => {
+          const activityDate = new Date(activity.timestamp);
+          return activityDate >= date && activityDate < nextDate;
+        });
+
+        // Count activities by severity
+        const severityCounts = {
+          info: 0,
+          warning: 0,
+          error: 0
+        };
+
+        dayActivities.forEach((activity: any) => {
+          const severity = activity.severity || 'info';
+          if (severityCounts[severity as keyof typeof severityCounts] !== undefined) {
+            severityCounts[severity as keyof typeof severityCounts]++;
+          }
+        });
+
+        // Count unique users for this day
+        const uniqueUsers = new Set(dayActivities.map((activity: any) => activity.user_id));
 
         trends.push({
           date: dateStr,
-          actions: baseActivity,
-          users: Math.floor(Math.random() * 8) + 3,
-          severity: {
-            info: infoActions,
-            warning: warningActions,
-            error: errorActions
-          }
+          actions: dayActivities.length,
+          users: uniqueUsers.size,
+          severity: severityCounts
         });
       }
 
@@ -403,18 +399,28 @@ class DashboardService {
           const totalStock = items.reduce((sum, item) => sum + (item.stock_quantity || 0), 0);
           const avgStock = totalStock / items.length;
 
-          // Mock utilization and restock data
-          const utilizationRate = Math.floor(Math.random() * 40) + 60; // 60-100%
-          const restockFrequency = Math.floor(Math.random() * 10) + 5; // 5-15 times
+          // Calculate utilization rate based on status distribution
+          const totalItems = items.length;
+          const activeItems = items.filter(item => item.status === 'active').length;
+          const lowStockItems = items.filter(item => item.status === 'low_stock').length;
+          const avgUtilization = totalItems > 0 ? Math.round((activeItems + (lowStockItems * 0.5)) / totalItems * 100) : 0;
+
+          // Calculate restock frequency based on recently updated items
+          const recentlyUpdated = items.filter(item => {
+            const updatedAt = new Date(item.updated_at || item.created_at);
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return updatedAt >= thirtyDaysAgo;
+          }).length;
 
           return {
             category,
             stockLevel: Math.round(avgStock),
-            utilizationRate,
-            restockFrequency
+            utilizationRate: avgUtilization,
+            restockFrequency: recentlyUpdated
           };
         })
-        .sort((a, b) => b.utilizationRate - a.utilizationRate)
+        .sort((a, b) => b.stockLevel - a.stockLevel)
         .slice(0, 5);
     } catch (error) {
       console.error('Error fetching top performing categories:', error);
