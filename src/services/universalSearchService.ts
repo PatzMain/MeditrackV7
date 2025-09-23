@@ -1,4 +1,4 @@
-import { optimizedInventoryService, optimizedUserService, optimizedActivityService } from './optimizedSupabaseService';
+import { optimizedInventoryService, optimizedActivityService } from './optimizedSupabaseService';
 import { supabase } from '../lib/supabase';
 import { cacheService, CACHE_TTL } from './cacheService';
 
@@ -65,15 +65,6 @@ class UniversalSearchService {
       priority: 80
     },
     {
-      id: 'nav-admin',
-      type: 'action',
-      title: 'Admin Management',
-      subtitle: 'Manage users and system settings',
-      icon: '🔧',
-      url: '/admin-management',
-      priority: 75
-    },
-    {
       id: 'nav-profile',
       type: 'action',
       title: 'Profile Settings',
@@ -93,16 +84,14 @@ class UniversalSearchService {
     }
   ];
 
-  // Common search terms and shortcuts (excluding dashboard)
+  // Common search terms and shortcuts (excluding dashboard and admin)
   private readonly SEARCH_SHORTCUTS: Record<string, string[]> = {
     'inventory': ['supplies', 'medicine', 'equipment', 'stock', 'medical', 'items'],
     'archive': ['archives', 'history', 'old', 'deleted', 'stored', 'past'],
     'logs': ['activity', 'audit', 'history', 'events', 'actions', 'tracking'],
-    'admin': ['management', 'users', 'system', 'settings', 'control'],
-    'profile': ['settings', 'account', 'user', 'preferences', 'personal'],
+    'profile': ['settings', 'account', 'preferences', 'personal'],
     'add': ['new', 'create', 'register', '+', 'insert'],
     'search': ['find', 'look', 'locate', 'query', 'filter'],
-    'user': ['admin', 'staff', 'employee', 'people', 'account'],
     'medical': ['medicine', 'drug', 'pharmaceutical', 'treatment', 'healthcare']
   };
 
@@ -123,13 +112,11 @@ class UniversalSearchService {
     try {
       const [
         inventoryResults,
-        userResults,
         actionResults,
         archiveResults,
         logResults
       ] = await Promise.all([
         this.searchInventory(normalizedQuery),
-        this.searchUsers(normalizedQuery),
         this.searchActions(normalizedQuery),
         this.searchArchives(normalizedQuery),
         this.searchLogs(normalizedQuery)
@@ -155,11 +142,6 @@ class UniversalSearchService {
           name: 'Activity Logs',
           results: logResults.slice(0, this.MAX_RESULTS_PER_CATEGORY),
           total: logResults.length
-        },
-        {
-          name: 'Users',
-          results: userResults.slice(0, this.MAX_RESULTS_PER_CATEGORY),
-          total: userResults.length
         }
       ].filter(category => category.results.length > 0);
 
@@ -254,43 +236,6 @@ class UniversalSearchService {
     }
   }
 
-  private async searchUsers(query: string): Promise<SearchResult[]> {
-    try {
-      return await cacheService.cachedCall(
-        'search',
-        'users',
-        async () => {
-          const { data: users } = await optimizedUserService.getAllUsers(); // Get ALL users for search
-
-          return users
-            .filter((user: any) =>
-              (user.first_name || '').toLowerCase().includes(query) ||
-              (user.last_name || '').toLowerCase().includes(query) ||
-              (user.username || '').toLowerCase().includes(query) ||
-              (user.department || '').toLowerCase().includes(query) ||
-              (user.role || '').toLowerCase().includes(query)
-            )
-            .map((user: any) => ({
-              id: `user_${user.id}`,
-              type: 'user' as const,
-              title: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
-              subtitle: user.role?.charAt(0).toUpperCase() + user.role?.slice(1),
-              description: user.department ? `Department: ${user.department}` : undefined,
-              metadata: user.employee_id ? `ID: ${user.employee_id}` : undefined,
-              icon: '👨‍⚕️',
-              url: `/admin-management`,
-              priority: 40
-            }))
-            .sort((a: any, b: any) => b.priority - a.priority);
-        },
-        { query },
-        CACHE_TTL.MEDIUM
-      );
-    } catch (error) {
-      console.error('Error searching users:', error);
-      return [];
-    }
-  }
 
   private async searchArchives(query: string): Promise<SearchResult[]> {
     try {

@@ -22,8 +22,6 @@ const AddInventoryItemModal: React.FC<AddInventoryItemModalProps> = ({ onClose, 
     status: 'active'
   });
 
-  // Check if current classification is equipment for maintenance status
-  const isEquipmentClassification = activeClassificationTab === 'equipment';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -94,9 +92,7 @@ const AddInventoryItemModal: React.FC<AddInventoryItemModalProps> = ({ onClose, 
                 <option value="low_stock">Low Stock</option>
                 <option value="out_of_stock">Out of Stock</option>
                 <option value="expired">Expired</option>
-                {isEquipmentClassification && (
-                  <option value="maintenance">Maintenance</option>
-                )}
+                <option value="maintenance">Maintenance</option>
               </select>
             </div>
           </div>

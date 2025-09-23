@@ -340,6 +340,45 @@ export const inventoryService = {
     if (error) throw new Error(error.message);
     return data || [];
   },
+
+  getAllInventoryTables: async () => {
+    const departments = ['medical', 'dental'];
+    const classifications = ['Medicines', 'Supplies', 'Equipment'];
+    const tables = [];
+
+    for (const department of departments) {
+      for (const classification of classifications) {
+        try {
+          const data = await inventoryService.getItemsByDepartmentAndClassification(department, classification);
+
+          if (data && data.length > 0) {
+            const lowStockItems = data.filter(item => item.status === 'low_stock');
+            const outOfStockItems = data.filter(item => item.status === 'out_of_stock');
+            const expiredItems = data.filter(item => item.status === 'expired');
+            const maintenanceItems = data.filter(item => item.status === 'maintenance');
+
+            tables.push({
+              id: `${department}-${classification.toLowerCase()}`,
+              department,
+              classification,
+              data,
+              stats: {
+                totalItems: data.length,
+                lowStockItems: lowStockItems.length,
+                outOfStockItems: outOfStockItems.length,
+                expiredItems: expiredItems.length,
+                maintenanceItems: maintenanceItems.length
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Failed to fetch data for ${department} ${classification}:`, error);
+        }
+      }
+    }
+
+    return tables;
+  },
 };
 
 // Activity logging service

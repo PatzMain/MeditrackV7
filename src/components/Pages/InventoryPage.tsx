@@ -7,6 +7,7 @@ import ViewInventoryItemModal from '../Modals/ViewInventoryItemModal';
 import EditInventoryItemModal from '../Modals/EditInventoryItemModal';
 import ArchiveInventoryItemModal from '../Modals/ArchiveInventoryItemModal';
 import AddInventoryItemModal from '../Modals/AddInventoryItemModal';
+import ExportInventoryModal from '../Modals/ExportInventoryModal';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -21,6 +22,7 @@ const InventoryPage: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean | 'multi'>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -106,7 +108,6 @@ const InventoryPage: React.FC = () => {
 
           // Determine target department and classification
           const targetDepartment = department || activeDepartment;
-          const targetClassification = classification || getClassificationFromTab(activeTab);
           const targetTab = classification ? getTabFromClassification(classification) : activeTab;
 
           // Update state if needed
@@ -165,7 +166,7 @@ const InventoryPage: React.FC = () => {
 
       processNavigation();
     }
-  }, [location.search]);
+  }, [location.search, activeDepartment, activeTab, navigate]);
 
   // Only fetch data after initial mount and when department/classification changes
   useEffect(() => {
@@ -257,12 +258,14 @@ const InventoryPage: React.FC = () => {
     const lowStockItems = inventoryData.filter(item => item.status === 'low_stock');
     const outOfStockItems = inventoryData.filter(item => item.status === 'out_of_stock');
     const expiredItems = inventoryData.filter(item => item.status === 'expired');
+    const maintenanceItems = inventoryData.filter(item => item.status === 'maintenance');
 
     return {
       totalItems: inventoryData.length,
       lowStockItems: lowStockItems.length,
       outOfStockItems: outOfStockItems.length,
-      expiredItems: expiredItems.length
+      expiredItems: expiredItems.length,
+      maintenanceItems: maintenanceItems.length
     };
   }, [inventoryData]);
 
@@ -274,13 +277,16 @@ const InventoryPage: React.FC = () => {
 
   const handleSaveItem = async (updatedItem: any) => {
     try {
+      console.log('InventoryPage received updatedItem:', updatedItem);
       const { classification, ...itemToSave } = updatedItem;
+      console.log('After removing classification, itemToSave:', itemToSave);
       await inventoryService.updateItem(itemToSave.id, itemToSave);
       activityService.logActivity({ action: 'edit', description: `Edited inventory item: ${itemToSave.generic_name}` });
       fetchInventoryData();
       setIsEditModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating item:', error);
+      alert('Error saving item: ' + error.message);
     }
   };
 
@@ -321,6 +327,8 @@ const InventoryPage: React.FC = () => {
   };
 
   const renderStatCards = () => {
+    const isEquipmentTab = activeTab === 'equipment';
+
     const statCards = [
       {
         title: `Total ${getClassificationFromTab(activeTab)}`,
@@ -360,11 +368,19 @@ const InventoryPage: React.FC = () => {
         )
       },
       {
-        title: 'Expired Items',
-        value: inventoryStats.expiredItems.toString(),
-        change: inventoryStats.expiredItems > 0 ? 'Dispose required' : 'All current',
-        changeType: inventoryStats.expiredItems > 0 ? 'danger' : 'positive',
-        icon: (
+        title: isEquipmentTab ? 'Maintenance Items' : 'Expired Items',
+        value: isEquipmentTab ? inventoryStats.maintenanceItems.toString() : inventoryStats.expiredItems.toString(),
+        change: isEquipmentTab
+          ? (inventoryStats.maintenanceItems > 0 ? 'Service required' : 'All operational')
+          : (inventoryStats.expiredItems > 0 ? 'Dispose required' : 'All current'),
+        changeType: isEquipmentTab
+          ? (inventoryStats.maintenanceItems > 0 ? 'warning' : 'positive')
+          : (inventoryStats.expiredItems > 0 ? 'danger' : 'positive'),
+        icon: isEquipmentTab ? (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+        ) : (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
             <line x1="12" y1="6" x2="12" y2="12" stroke="currentColor" strokeWidth="2"/>
@@ -567,6 +583,9 @@ const InventoryPage: React.FC = () => {
                   <option value="low_stock">Low Stock</option>
                   <option value="out_of_stock">Out of Stock</option>
                   <option value="expired">Expired</option>
+                  {activeTab === 'equipment' && (
+                    <option value="maintenance">Maintenance</option>
+                  )}
                 </select>
               </div>
 
@@ -583,9 +602,31 @@ const InventoryPage: React.FC = () => {
                 </select>
               </div>
 
-              <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-                Add {getSingularClassification(activeTab)}
-              </button>
+              <div className="action-buttons">
+                <button className="btn-secondary" onClick={() => setIsExportModalOpen(true)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7,10 12,15 17,10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Export Current
+                </button>
+                <button className="btn-secondary" onClick={() => setIsExportModalOpen('multi')}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+                    <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+                    <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7,10 12,15 17,10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Export Multi-Table
+                </button>
+                <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
+                  Add {getSingularClassification(activeTab)}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -632,6 +673,14 @@ const InventoryPage: React.FC = () => {
         department={activeDepartment}
         classifications={classifications}
         activeClassificationTab={activeTab}
+      />}
+      {isExportModalOpen && <ExportInventoryModal
+        onClose={() => setIsExportModalOpen(false)}
+        data={isExportModalOpen === 'multi' ? undefined : sortedAndFilteredItems}
+        department={isExportModalOpen === 'multi' ? undefined : activeDepartment}
+        classification={isExportModalOpen === 'multi' ? undefined : activeTab}
+        stats={isExportModalOpen === 'multi' ? undefined : inventoryStats}
+        enableMultiTable={isExportModalOpen === 'multi'}
       />}
     </div>
   );

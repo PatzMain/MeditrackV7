@@ -19,6 +19,7 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
 
   if (!item) return null;
 
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev: any) => ({ ...prev, [name]: value }));
@@ -26,6 +27,7 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Final formData being saved:', formData);
     onSave(formData);
   };
 
@@ -88,9 +90,7 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
                 <option value="low_stock">Low Stock</option>
                 <option value="out_of_stock">Out of Stock</option>
                 <option value="expired">Expired</option>
-                {formData.classification?.toLowerCase() === 'equipment' && (
-                  <option value="maintenance">Maintenance</option>
-                )}
+                <option value="maintenance">Maintenance</option>
               </select>
             </div>
           </div>

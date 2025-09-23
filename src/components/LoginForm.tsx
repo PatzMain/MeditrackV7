@@ -43,14 +43,14 @@ const LoginForm: React.FC = () => {
                         <svg className="logo-svg" viewBox="0 0 100 100">
               <defs>
                 <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#1e3c72"></stop>
-                  <stop offset="100%" stopColor="#2563eb"></stop>
+                  <stop offset="0%" stopColor="#0f172a"/>
+                  <stop offset="50%" stopColor="#1e40af"/>
+                  <stop offset="100%" stopColor="#3730a3"/>
                 </linearGradient>
               </defs>
-              <circle cx="50" cy="50" r="45" fill="url(#logoGradient)" stroke="#fff" strokeWidth="3"></circle>
-              <path d="M35 30 L65 30 L65 35 L60 35 L60 65 L55 65 L55 45 L45 45 L45 65 L40 65 L40 35 L35 35 Z" fill="white"></path>
-              <circle cx="50" cy="25" r="8" fill="white"></circle>
-              <path d="M30 70 Q50 60 70 70" stroke="white" strokeWidth="3" fill="none"></path>
+              <circle cx="50" cy="50" r="45" fill="url(#logoGradient)"/>
+              <rect x="44" y="25" width="12" height="50" fill="#ffffff" rx="3"/>
+              <rect x="25" y="44" width="50" height="12" fill="#ffffff" rx="3"/>
             </svg>
           </div>
           <h1 className="branding-title">Meditrack</h1>

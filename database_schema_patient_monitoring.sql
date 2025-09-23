@@ -22,6 +22,10 @@ CREATE TABLE patients (
     patient_type VARCHAR(20) CHECK (patient_type IN ('Employee', 'Dependent', 'Student', 'OPD')) NOT NULL,
     course_department VARCHAR(100), -- For students/employees
 
+    -- Student Classification (only for patient_type = 'Student')
+    student_level VARCHAR(20),
+    year_level INTEGER,
+
     -- Contact Information
     phone VARCHAR(20),
     email VARCHAR(100),
@@ -30,7 +34,8 @@ CREATE TABLE patients (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INTEGER REFERENCES users(id),
-    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived'))
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')),
+
 );
 
 -- =============================================
@@ -284,6 +289,41 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to validate student level and year
+CREATE OR REPLACE FUNCTION validate_student_data()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Only validate if patient is a student
+    IF NEW.patient_type = 'Student' THEN
+        -- Check if student_level and year_level are provided
+        IF NEW.student_level IS NULL OR NEW.year_level IS NULL THEN
+            RAISE EXCEPTION 'Student patients must have both student_level and year_level specified';
+        END IF;
+
+        -- Validate high school years (7-12)
+        IF NEW.student_level = 'highschool' THEN
+            IF NEW.year_level < 7 OR NEW.year_level > 12 THEN
+                RAISE EXCEPTION 'High school students must be in grades 7-12, got grade %', NEW.year_level;
+            END IF;
+        END IF;
+
+        -- Validate college years (1-6)
+        IF NEW.student_level = 'college' THEN
+            IF NEW.year_level < 1 OR NEW.year_level > 6 THEN
+                RAISE EXCEPTION 'College students must be in years 1-6, got year %', NEW.year_level;
+            END IF;
+        END IF;
+
+        -- Validate that student_level is either highschool or college
+        IF NEW.student_level != 'highschool' AND NEW.student_level != 'college' THEN
+            RAISE EXCEPTION 'Student level must be either highschool or college, got %', NEW.student_level;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- =============================================
 -- TRIGGERS for Auto-generation
 -- =============================================
@@ -319,6 +359,12 @@ CREATE TRIGGER trigger_set_case_number
     BEFORE INSERT ON consultations
     FOR EACH ROW
     EXECUTE FUNCTION set_case_number();
+
+-- Trigger to validate student data
+CREATE TRIGGER trigger_validate_student_data
+    BEFORE INSERT OR UPDATE ON patients
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_student_data();
 
 -- =============================================
 -- VIEWS for Common Queries
@@ -391,10 +437,12 @@ LEFT JOIN glasgow_coma_scales gcs ON c.id = gcs.consultation_id;
 -- =============================================
 
 -- Insert sample patient types and medical reference data
-INSERT INTO patients (first_name, last_name, age, sex, civil_status, birthday, address, patient_type, course_department, phone, email, created_by) VALUES
-('John', 'Doe', 25, 'Male', 'Single', '1998-05-15', '123 Main St, Rosario, Cavite', 'Student', 'Computer Science', '09123456789', 'john.doe@cvsu.edu.ph', 1),
-('Jane', 'Smith', 30, 'Female', 'Married', '1993-08-22', '456 Oak Ave, Rosario, Cavite', 'Employee', 'Nursing Department', '09987654321', 'jane.smith@cvsu.edu.ph', 1),
-('Maria', 'Garcia', 22, 'Female', 'Single', '2001-12-10', '789 Pine St, Rosario, Cavite', 'Student', 'Nursing', '09111222333', 'maria.garcia@cvsu.edu.ph', 1);
+INSERT INTO patients (first_name, last_name, age, sex, civil_status, birthday, address, patient_type, course_department, student_level, year_level, phone, email, created_by) VALUES
+('John', 'Doe', 21, 'Male', 'Single', '2002-05-15', '123 Main St, Rosario, Cavite', 'Student', 'Computer Science', 'college', 3, '09123456789', 'john.doe@cvsu.edu.ph', 1),
+('Jane', 'Smith', 30, 'Female', 'Married', '1993-08-22', '456 Oak Ave, Rosario, Cavite', 'Employee', 'Nursing Department', NULL, NULL, '09987654321', 'jane.smith@cvsu.edu.ph', 1),
+('Maria', 'Garcia', 17, 'Female', 'Single', '2006-12-10', '789 Pine St, Rosario, Cavite', 'Student', 'Science and Technology', 'highschool', 11, '09111222333', 'maria.garcia@cvsu.edu.ph', 1),
+('Pedro', 'Santos', 19, 'Male', 'Single', '2004-03-08', '321 Elm St, Rosario, Cavite', 'Student', 'Engineering', 'college', 1, '09444555666', 'pedro.santos@cvsu.edu.ph', 1),
+('Ana', 'Cruz', 16, 'Female', 'Single', '2007-09-20', '654 Maple Ave, Rosario, Cavite', 'Student', 'Arts and Sciences', 'highschool', 10, '09777888999', 'ana.cruz@cvsu.edu.ph', 1);
 
 -- Notes for implementation:
 -- 1. This schema supports the complete consultation form
