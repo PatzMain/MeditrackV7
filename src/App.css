@@ -12,7 +12,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-blue) 100%);
 }
 
 .loading-spinner {
@@ -21,16 +21,16 @@
   align-items: center;
   gap: 16px;
   padding: 40px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-primary);
   border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
   backdrop-filter: blur(10px);
 }
 
 .loading-spinner span {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1e3c72;
+  color: var(--primary-navy);
   letter-spacing: -0.025em;
 }
 
@@ -43,8 +43,8 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-  background: #f8fafc;
-  color: #1f2937;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   line-height: 1.6;
   font-size: 16px;
   font-weight: 400;
@@ -59,22 +59,22 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--gray-300);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--gray-400);
 }
 
 /* Selection Styles */
 ::selection {
   background: rgba(37, 99, 235, 0.2);
-  color: #1e3c72;
+  color: var(--primary-navy);
 }
 
 /* Focus Styles */
@@ -82,7 +82,7 @@ button:focus,
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--primary-blue);
   outline-offset: 2px;
 }
 

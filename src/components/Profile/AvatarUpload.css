@@ -21,8 +21,8 @@
 }
 
 .avatar-container:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 25px rgba(30, 60, 114, 0.4);
+  transform: none;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
 .avatar-container.uploading {
@@ -43,9 +43,11 @@
 }
 
 .avatar-large .avatar-container {
-  width: 120px;
-  height: 120px;
-  font-size: 2rem;
+  width: 140px;
+  height: 140px;
+  font-size: 2.5rem;
+  border: 6px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
 .avatar-image {
@@ -211,9 +213,10 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .avatar-large .avatar-container {
-    width: 100px;
-    height: 100px;
-    font-size: 1.75rem;
+    width: 120px;
+    height: 120px;
+    font-size: 2rem;
+    border: 6px solid rgba(255, 255, 255, 0.9);
   }
 
   .avatar-medium .avatar-container {

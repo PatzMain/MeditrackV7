@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { activityService } from '../../services/supabaseService';
 import './LogsPage.css';
 import './PagesStyles.css';
@@ -15,6 +16,11 @@ const LogsPage: React.FC = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [sortField, setSortField] = useState<string>('timestamp');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(100);
+  const [highlightedLogId, setHighlightedLogId] = useState<number | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -33,6 +39,41 @@ const LogsPage: React.FC = () => {
 
     fetchLogs();
   }, []);
+
+  // Handle URL highlighting from universal search
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const highlightId = searchParams.get('highlightId');
+
+    if (highlightId) {
+      setHighlightedLogId(parseInt(highlightId, 10));
+      // Clean up URL
+      navigate('/logs', { replace: true });
+    }
+  }, [location.search, navigate]);
+
+  // Scroll to and highlight log when highlightedLogId changes
+  useEffect(() => {
+    if (highlightedLogId && logs.length > 0 && !loading) {
+      const timer = setTimeout(() => {
+        const logElement = document.getElementById(`log-item-${highlightedLogId}`);
+        if (logElement) {
+          // Scroll to the log
+          logElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+
+          // Clear highlight after 3 seconds
+          setTimeout(() => {
+            setHighlightedLogId(null);
+          }, 3000);
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedLogId, logs, loading]);
 
   const users = ['all', ...Array.from(new Set(logs.map(log => log.users?.username || 'Unknown')))];
   const actions = ['all', ...Array.from(new Set(logs.map(log => log.action)))];
@@ -81,6 +122,12 @@ const LogsPage: React.FC = () => {
       return matchesSearch && matchesUser && matchesAction;
     })
   );
+
+  // Pagination
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLogs = filteredLogs.slice(startIndex, endIndex);
 
   const handleExportLogs = () => {
     console.log('Exporting logs...');
@@ -176,6 +223,18 @@ const LogsPage: React.FC = () => {
             </select>
           </div>
 
+          <div className="filter-group">
+            <label>Items per page:</label>
+            <select value={itemsPerPage} onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
 
           <button className="btn-secondary" onClick={handleExportLogs}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -197,22 +256,71 @@ const LogsPage: React.FC = () => {
       )}
 
       {/* Log Statistics */}
-      <div className="log-stats">
-        <div className="stat-item">
-          <div className="stat-number">{filteredLogs.length}</div>
-          <div className="stat-label">Total Entries</div>
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 20h9" stroke="currentColor" strokeWidth="2"/>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{filteredLogs.length}</div>
+            <div className="stat-title">Total Activity Logs</div>
+            <div className="stat-change neutral">All recorded actions</div>
+          </div>
         </div>
-        <div className="stat-item">
-          <div className="stat-number">{filteredLogs.filter(log => log.severity === 'info').length}</div>
-          <div className="stat-label">Info</div>
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" strokeWidth="2"/>
+              <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="12" cy="17" r="1" fill="currentColor"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{filteredLogs.filter(log => log.severity === 'warning').length}</div>
+            <div className="stat-title">Warnings</div>
+            <div className={`stat-change ${filteredLogs.filter(log => log.severity === 'warning').length > 0 ? 'warning' : 'positive'}`}>
+              {filteredLogs.filter(log => log.severity === 'warning').length > 0 ? 'Needs attention' : 'None found'}
+            </div>
+          </div>
         </div>
-        <div className="stat-item">
-          <div className="stat-number">{filteredLogs.filter(log => log.severity === 'warning').length}</div>
-          <div className="stat-label">Warnings</div>
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
+              <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{filteredLogs.filter(log => log.severity === 'error').length}</div>
+            <div className="stat-title">Errors</div>
+            <div className={`stat-change ${filteredLogs.filter(log => log.severity === 'error').length > 0 ? 'danger' : 'positive'}`}>
+              {filteredLogs.filter(log => log.severity === 'error').length > 0 ? 'Critical issues' : 'None found'}
+            </div>
+          </div>
         </div>
-        <div className="stat-item">
-          <div className="stat-number">{filteredLogs.filter(log => log.severity === 'error').length}</div>
-          <div className="stat-label">Errors</div>
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <polyline points="12,6 12,12 16,14" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">
+              {logs.filter(log =>
+                new Date(log.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+              ).length}
+            </div>
+            <div className="stat-title">Last 24 Hours</div>
+            <div className="stat-change neutral">Recent activity</div>
+          </div>
         </div>
       </div>
 
@@ -244,8 +352,12 @@ const LogsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className={`log-row severity-${log.severity}`}>
+              {paginatedLogs.map((log) => (
+                <tr
+                  key={log.id}
+                  id={`log-item-${log.id}`}
+                  className={`log-row severity-${log.severity} ${highlightedLogId === log.id ? 'highlighted-item' : ''}`}
+                >
                   <td className="timestamp-cell">
                     <div className="timestamp">{new Date(log.timestamp).toLocaleString()}</div>
                   </td>
@@ -300,11 +412,37 @@ const LogsPage: React.FC = () => {
 
       {/* Pagination */}
       <div className="pagination">
-        <button className="pagination-btn">Previous</button>
-        <div className="pagination-info">
-          Showing {filteredLogs.length} of {logs.length} log entries
+        <button
+          className="pagination-btn"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(currentPage - 1)}
+        >
+          Previous
+        </button>
+
+        <div className="pagination-pages">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button
+              key={page}
+              className={`pagination-page ${page === currentPage ? 'active' : ''}`}
+              onClick={() => setCurrentPage(page)}
+            >
+              {page}
+            </button>
+          ))}
         </div>
-        <button className="pagination-btn">Next</button>
+
+        <div className="pagination-info">
+          Showing {startIndex + 1}-{Math.min(endIndex, filteredLogs.length)} of {filteredLogs.length} log entries
+        </div>
+
+        <button
+          className="pagination-btn"
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(currentPage + 1)}
+        >
+          Next
+        </button>
       </div>
 
       {isViewModalOpen && (

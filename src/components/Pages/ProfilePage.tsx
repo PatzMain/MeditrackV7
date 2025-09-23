@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { profileService, UserProfile, PasswordChangeRequest, ActivityLog } from '../../services/profileService';
+import { profileService, UserProfile, PasswordChangeRequest } from '../../services/profileService';
 import AvatarUpload from '../Profile/AvatarUpload';
 import './ProfilePage.css';
 
@@ -20,8 +20,6 @@ const ProfilePage: React.FC = () => {
     new_password: '',
     confirm_password: ''
   });
-  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
-  const [accountStats, setAccountStats] = useState<any>({});
 
   useEffect(() => {
     loadProfileData();
@@ -30,16 +28,9 @@ const ProfilePage: React.FC = () => {
   const loadProfileData = async () => {
     try {
       setIsLoading(true);
-      const [profileData, activities, stats] = await Promise.all([
-        profileService.getFullProfile(),
-        profileService.getActivityLogs(20),
-        profileService.getAccountStats()
-      ]);
-
+      const profileData = await profileService.getFullProfile();
       setProfile(profileData);
       setProfileForm(profileData);
-      setActivityLogs(activities);
-      setAccountStats(stats);
     } catch (error: any) {
       setErrorMessage(error.message || 'Failed to load profile data');
     } finally {
@@ -57,10 +48,6 @@ const ProfilePage: React.FC = () => {
       updateUser(updatedProfile);
       setIsEditing(false);
       setSuccessMessage('Profile updated successfully!');
-
-      await profileService.logActivity('profile_updated', 'User updated profile information', 'profile');
-      const activities = await profileService.getActivityLogs(20);
-      setActivityLogs(activities);
     } catch (error: any) {
       setErrorMessage(error.message || 'Failed to update profile');
     } finally {
@@ -88,9 +75,6 @@ const ProfilePage: React.FC = () => {
         confirm_password: ''
       });
       setSuccessMessage('Password changed successfully!');
-
-      const activities = await profileService.getActivityLogs(20);
-      setActivityLogs(activities);
     } catch (error: any) {
       setErrorMessage(error.message || 'Failed to change password');
     } finally {
@@ -105,7 +89,6 @@ const ProfilePage: React.FC = () => {
       setProfileForm(updatedProfile);
       updateUser(updatedProfile as any);
       setSuccessMessage('Avatar updated successfully!');
-      await profileService.logActivity('avatar_updated', 'User updated profile avatar', 'profile');
     }
   };
 
@@ -124,15 +107,6 @@ const ProfilePage: React.FC = () => {
     });
   };
 
-  const getInitials = (firstName?: string, lastName?: string, username?: string) => {
-    if (firstName && lastName) {
-      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-    }
-    if (username) {
-      return username.charAt(0).toUpperCase();
-    }
-    return 'U';
-  };
 
   const getDisplayName = (profile: UserProfile) => {
     if (profile.first_name && profile.last_name) {
@@ -176,45 +150,49 @@ const ProfilePage: React.FC = () => {
         </div>
 
         <div className="profile-info-section">
-          <div className="avatar-section">
-            <div className="avatar-container">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="Profile" className="profile-avatar" />
-              ) : (
-                <div className="avatar-placeholder">
-                  {getInitials(profile.first_name, profile.last_name, profile.username)}
-                </div>
-              )}
+          <div className="profile-main-info">
+            <div className="avatar-section">
               <AvatarUpload
                 user={profile}
                 onAvatarUpdate={handleAvatarUpdate}
                 size="large"
               />
             </div>
-          </div>
 
-          <div className="profile-details">
-            <h1 className="profile-name">{getDisplayName(profile)}</h1>
-            <div className="profile-meta">
-              <span className="role-badge">{profile.role?.charAt(0).toUpperCase()}{profile.role?.slice(1)}</span>
-              <span className="department">{profile.department || 'No Department'}</span>
-              {profile.position && <span className="position">{profile.position}</span>}
+            <div className="profile-content-wrapper">
+              <div className="profile-details">
+                <h1 className="profile-name">{getDisplayName(profile)}</h1>
+                <div className="profile-meta">
+                  <span className="role-badge">{profile.role?.charAt(0).toUpperCase()}{profile.role?.slice(1)}</span>
+                  {profile.department && <span className="department">{profile.department}</span>}
+                  {profile.position && <span className="position">{profile.position}</span>}
+                </div>
+                {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+              </div>
             </div>
-            {profile.bio && <p className="profile-bio">{profile.bio}</p>}
           </div>
 
           <div className="profile-stats">
             <div className="stat-card">
-              <div className="stat-value">{accountStats.login_count || 0}</div>
-              <div className="stat-label">Total Logins</div>
+              <div className="stat-icon">📊</div>
+              <div className="stat-content">
+                <div className="stat-value">{profile.login_count || 0}</div>
+                <div className="stat-label">Total Logins</div>
+              </div>
             </div>
             <div className="stat-card">
-              <div className="stat-value">{accountStats.account_age_days || 0}</div>
-              <div className="stat-label">Days Active</div>
+              <div className="stat-icon">📅</div>
+              <div className="stat-content">
+                <div className="stat-value">{profile.created_at ? Math.floor((new Date().getTime() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0}</div>
+                <div className="stat-label">Days Active</div>
+              </div>
             </div>
             <div className="stat-card">
-              <div className="stat-value">{accountStats.total_activities || 0}</div>
-              <div className="stat-label">Activities</div>
+              <div className="stat-icon">{profile.role === 'superadmin' ? '⭐' : '👤'}</div>
+              <div className="stat-content">
+                <div className="stat-value">{profile.role === 'superadmin' ? 'Super' : 'Admin'}</div>
+                <div className="stat-label">Role Level</div>
+              </div>
             </div>
           </div>
         </div>
@@ -284,17 +262,6 @@ const ProfilePage: React.FC = () => {
             </svg>
             Security
           </button>
-
-          <button
-            className={`tab-button ${activeTab === 'activity' ? 'active' : ''}`}
-            onClick={() => setActiveTab('activity')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12,6 12,12 16,14"/>
-            </svg>
-            Activity
-          </button>
         </div>
       </div>
 
@@ -304,29 +271,47 @@ const ProfilePage: React.FC = () => {
           <div className="overview-tab">
             <div className="overview-grid">
               <div className="overview-card">
-                <h3>Quick Info</h3>
+                <div className="card-header">
+                  <div className="card-icon">💼</div>
+                  <h3>Quick Info</h3>
+                </div>
                 <div className="info-list">
                   <div className="info-item">
-                    <span className="info-label">Employee ID</span>
-                    <span className="info-value">{profile.employee_id || 'Not set'}</span>
+                    <div className="info-icon">🆔</div>
+                    <div className="info-content">
+                      <span className="info-label">Employee ID</span>
+                      <span className="info-value">{profile.employee_id || 'Not set'}</span>
+                    </div>
                   </div>
                   <div className="info-item">
-                    <span className="info-label">Department</span>
-                    <span className="info-value">{profile.department || 'Not assigned'}</span>
+                    <div className="info-icon">🏢</div>
+                    <div className="info-content">
+                      <span className="info-label">Department</span>
+                      <span className="info-value">{profile.department || 'Not assigned'}</span>
+                    </div>
                   </div>
                   <div className="info-item">
-                    <span className="info-label">Position</span>
-                    <span className="info-value">{profile.position || 'Not specified'}</span>
+                    <div className="info-icon">👨‍💼</div>
+                    <div className="info-content">
+                      <span className="info-label">Position</span>
+                      <span className="info-value">{profile.position || 'Not specified'}</span>
+                    </div>
                   </div>
                   <div className="info-item">
-                    <span className="info-label">Phone</span>
-                    <span className="info-value">{profile.phone || 'Not provided'}</span>
+                    <div className="info-icon">📱</div>
+                    <div className="info-content">
+                      <span className="info-label">Phone</span>
+                      <span className="info-value">{profile.phone || 'Not provided'}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="overview-card">
-                <h3>Account Status</h3>
+                <div className="card-header">
+                  <div className="card-icon">🛡️</div>
+                  <h3>Account Status</h3>
+                </div>
                 <div className="status-grid">
                   <div className="status-item">
                     <div className="status-icon active">✅</div>
@@ -336,33 +321,49 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
                   <div className="status-item">
-                    <div className="status-icon">🔐</div>
+                    <div className="status-icon">{profile.role === 'superadmin' ? '⭐' : '👤'}</div>
                     <div className="status-text">
-                      <div className="status-title">Security Status</div>
-                      <div className="status-desc">Password last changed {accountStats.password_age_days} days ago</div>
+                      <div className="status-title">Role: {profile.role?.charAt(0).toUpperCase()}{profile.role?.slice(1)}</div>
+                      <div className="status-desc">System access level</div>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="overview-card">
-                <h3>Recent Activity</h3>
-                <div className="activity-preview">
-                  {activityLogs.slice(0, 3).map((activity) => (
-                    <div key={activity.id} className="activity-item-small">
-                      <div className="activity-icon">📝</div>
-                      <div className="activity-content">
-                        <div className="activity-title">{activity.action.replace(/_/g, ' ').toUpperCase()}</div>
-                        <div className="activity-time">{formatDate(activity.timestamp)}</div>
-                      </div>
+                <div className="card-header">
+                  <div className="card-icon">ℹ️</div>
+                  <h3>Account Info</h3>
+                </div>
+                <div className="info-list">
+                  <div className="info-item">
+                    <div className="info-icon">👤</div>
+                    <div className="info-content">
+                      <span className="info-label">Username</span>
+                      <span className="info-value">{profile.username}</span>
                     </div>
-                  ))}
-                  <button
-                    className="view-all-btn"
-                    onClick={() => setActiveTab('activity')}
-                  >
-                    View All Activity
-                  </button>
+                  </div>
+                  <div className="info-item">
+                    <div className="info-icon">🗓️</div>
+                    <div className="info-content">
+                      <span className="info-label">Created</span>
+                      <span className="info-value">{profile.created_at ? formatDate(profile.created_at) : 'Unknown'}</span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <div className="info-icon">✏️</div>
+                    <div className="info-content">
+                      <span className="info-label">Last Updated</span>
+                      <span className="info-value">{profile.updated_at ? formatDate(profile.updated_at) : 'Never'}</span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <div className="info-icon">🕒</div>
+                    <div className="info-content">
+                      <span className="info-label">Last Login</span>
+                      <span className="info-value">{profile.last_login ? formatDate(profile.last_login) : 'Never'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -443,17 +444,6 @@ const ProfilePage: React.FC = () => {
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="date_of_birth">Date of Birth</label>
-                    <input
-                      id="date_of_birth"
-                      type="date"
-                      value={profileForm.date_of_birth || ''}
-                      onChange={(e) => setProfileForm({...profileForm, date_of_birth: e.target.value})}
-                      disabled={!isEditing}
-                    />
-                  </div>
-
-                  <div className="form-group">
                     <label htmlFor="gender">Gender</label>
                     <select
                       id="gender"
@@ -467,71 +457,6 @@ const ProfilePage: React.FC = () => {
                       <option value="other">Other</option>
                       <option value="prefer_not_to_say">Prefer not to say</option>
                     </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-section">
-                <h3>Address Information</h3>
-                <div className="form-grid">
-                  <div className="form-group full-width">
-                    <label htmlFor="address">Street Address</label>
-                    <textarea
-                      id="address"
-                      value={profileForm.address || ''}
-                      onChange={(e) => setProfileForm({...profileForm, address: e.target.value})}
-                      disabled={!isEditing}
-                      placeholder="Enter your street address"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="city">City</label>
-                    <input
-                      id="city"
-                      type="text"
-                      value={profileForm.city || ''}
-                      onChange={(e) => setProfileForm({...profileForm, city: e.target.value})}
-                      disabled={!isEditing}
-                      placeholder="Enter your city"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="state">State/Province</label>
-                    <input
-                      id="state"
-                      type="text"
-                      value={profileForm.state || ''}
-                      onChange={(e) => setProfileForm({...profileForm, state: e.target.value})}
-                      disabled={!isEditing}
-                      placeholder="Enter your state"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="zip_code">ZIP/Postal Code</label>
-                    <input
-                      id="zip_code"
-                      type="text"
-                      value={profileForm.zip_code || ''}
-                      onChange={(e) => setProfileForm({...profileForm, zip_code: e.target.value})}
-                      disabled={!isEditing}
-                      placeholder="Enter your ZIP code"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="country">Country</label>
-                    <input
-                      id="country"
-                      type="text"
-                      value={profileForm.country || ''}
-                      onChange={(e) => setProfileForm({...profileForm, country: e.target.value})}
-                      disabled={!isEditing}
-                      placeholder="Enter your country"
-                    />
                   </div>
                 </div>
               </div>
@@ -787,18 +712,10 @@ const ProfilePage: React.FC = () => {
                 <h3>Account Security</h3>
                 <div className="security-stats">
                   <div className="security-stat">
-                    <div className="stat-icon">🔑</div>
-                    <div className="stat-content">
-                      <div className="stat-title">Password Last Changed</div>
-                      <div className="stat-value">{accountStats.password_age_days} days ago</div>
-                    </div>
-                  </div>
-
-                  <div className="security-stat">
                     <div className="stat-icon">🕒</div>
                     <div className="stat-content">
                       <div className="stat-title">Last Login</div>
-                      <div className="stat-value">{profile.last_login ? formatDate(profile.last_login) : 'Today'}</div>
+                      <div className="stat-value">{profile.last_login ? formatDate(profile.last_login) : 'Never'}</div>
                     </div>
                   </div>
 
@@ -806,61 +723,19 @@ const ProfilePage: React.FC = () => {
                     <div className="stat-icon">📊</div>
                     <div className="stat-content">
                       <div className="stat-title">Login Count</div>
-                      <div className="stat-value">{accountStats.login_count} times</div>
+                      <div className="stat-value">{profile.login_count || 0} times</div>
+                    </div>
+                  </div>
+
+                  <div className="security-stat">
+                    <div className="stat-icon">📅</div>
+                    <div className="stat-content">
+                      <div className="stat-title">Account Created</div>
+                      <div className="stat-value">{profile.created_at ? formatDate(profile.created_at) : 'Unknown'}</div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'activity' && (
-          <div className="activity-tab">
-            <div className="tab-header">
-              <h2>Recent Activity</h2>
-              <button
-                className="btn btn-secondary"
-                onClick={() => loadProfileData()}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Refreshing...' : 'Refresh'}
-              </button>
-            </div>
-
-            <div className="activity-list">
-              {activityLogs.length > 0 ? (
-                activityLogs.map((activity) => (
-                  <div key={activity.id} className="activity-item">
-                    <div className="activity-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12,6 12,12 16,14"/>
-                      </svg>
-                    </div>
-                    <div className="activity-content">
-                      <div className="activity-header">
-                        <div className="activity-action">{activity.action.replace(/_/g, ' ').toUpperCase()}</div>
-                        <div className="activity-time">{formatDate(activity.timestamp)}</div>
-                      </div>
-                      {activity.details && (
-                        <div className="activity-details">{activity.details}</div>
-                      )}
-                      <div className="activity-meta">
-                        {activity.ip_address && (
-                          <span className="activity-ip">IP: {activity.ip_address}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="no-activity">
-                  <div className="no-activity-icon">📋</div>
-                  <h3>No Activity Found</h3>
-                  <p>Your recent activity will appear here as you use the system.</p>
-                </div>
-              )}
             </div>
           </div>
         )}

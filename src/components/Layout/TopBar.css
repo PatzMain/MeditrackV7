@@ -4,8 +4,8 @@
   align-items: center;
   justify-content: space-between;
   height: 70px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-tertiary) 100%);
+  border-bottom: 1px solid var(--border-primary);
   padding: 0 28px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
@@ -32,7 +32,7 @@
 }
 
 .topbar-brand {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 2px;
 }
@@ -40,7 +40,7 @@
 .brand-name {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #1e3c72 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-blue) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

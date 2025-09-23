@@ -12,7 +12,8 @@ interface EditUserModalProps {
 const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, user }) => {
   const [formData, setFormData] = useState({
     username: '',
-    role: 'user',
+    password: '',
+    role: 'admin',
     first_name: '',
     last_name: '',
     phone: '',
@@ -21,8 +22,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
     employee_id: '',
     license_number: '',
     specialization: '',
-    email: '',
-    status: 'active'
+    bio: '',
+    gender: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    emergency_contact_relationship: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -32,7 +36,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
     if (user && isOpen) {
       setFormData({
         username: user.username || '',
-        role: user.role || 'user',
+        password: '', // Always start empty for security
+        role: user.role || 'admin',
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         phone: user.phone || '',
@@ -41,15 +46,18 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
         employee_id: user.employee_id || '',
         license_number: user.license_number || '',
         specialization: user.specialization || '',
-        email: user.email || '',
-        status: user.status || 'active'
+        bio: user.bio || '',
+        gender: user.gender || '',
+        emergency_contact_name: user.emergency_contact_name || '',
+        emergency_contact_phone: user.emergency_contact_phone || '',
+        emergency_contact_relationship: user.emergency_contact_relationship || ''
       });
     }
   }, [user, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -65,7 +73,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
         throw new Error('Username is required');
       }
 
-      await userService.updateUser(user.id, formData);
+      // Prepare update data - only include password if it's provided
+      const updateData: any = { ...formData };
+      if (!formData.password.trim()) {
+        const { password, ...dataWithoutPassword } = updateData;
+        await userService.updateUser(user.id, dataWithoutPassword);
+      } else {
+        await userService.updateUser(user.id, updateData);
+      }
       await activityService.logActivity({
         action: 'update',
         description: `Updated user: ${formData.username} with role: ${formData.role}`,
@@ -118,6 +133,18 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
               </div>
 
               <div className="form-group">
+                <label>Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Leave empty to keep current password"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="form-group">
                 <label>Role *</label>
                 <select
                   name="role"
@@ -126,13 +153,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
                   required
                   disabled={loading}
                 >
-                  <option value="user">User</option>
                   <option value="admin">Admin</option>
                   <option value="superadmin">Super Admin</option>
-                  <option value="doctor">Doctor</option>
-                  <option value="nurse">Nurse</option>
-                  <option value="dentist">Dentist</option>
-                  <option value="technician">Technician</option>
                 </select>
               </div>
 
@@ -171,14 +193,18 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
               </div>
 
               <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
+                <label>Gender</label>
+                <select
+                  name="gender"
+                  value={formData.gender}
                   onChange={handleChange}
                   disabled={loading}
-                />
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
 
               <div className="form-group">
@@ -248,17 +274,51 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
               </div>
 
               <div className="form-group">
-                <label>Status</label>
-                <select
-                  name="status"
-                  value={formData.status}
+                <label>Bio</label>
+                <textarea
+                  name="bio"
+                  value={formData.bio}
                   onChange={handleChange}
+                  placeholder="Brief description"
+                  rows={3}
                   disabled={loading}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
-                </select>
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Emergency Contact Name</label>
+                <input
+                  type="text"
+                  name="emergency_contact_name"
+                  value={formData.emergency_contact_name}
+                  onChange={handleChange}
+                  placeholder="Emergency contact full name"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Emergency Contact Phone</label>
+                <input
+                  type="tel"
+                  name="emergency_contact_phone"
+                  value={formData.emergency_contact_phone}
+                  onChange={handleChange}
+                  placeholder="Emergency contact phone"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Emergency Contact Relationship</label>
+                <input
+                  type="text"
+                  name="emergency_contact_relationship"
+                  value={formData.emergency_contact_relationship}
+                  onChange={handleChange}
+                  placeholder="e.g., Spouse, Parent, Sibling"
+                  disabled={loading}
+                />
               </div>
             </div>
           </div>

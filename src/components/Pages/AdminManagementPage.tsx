@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { userService, authService, activityService } from '../../services/supabaseService';
+import { userService, authService, activityService, inventoryService } from '../../services/supabaseService';
 import AddUserModal from '../Modals/AddUserModal';
 import EditUserModal from '../Modals/EditUserModal';
 import './AdminManagementPage.css';
@@ -9,6 +9,10 @@ interface SystemStats {
   totalUsers: number;
   roleCounts: { [key: string]: number };
   chartData: any[];
+  totalInventoryItems?: number;
+  lowStockItems?: number;
+  totalActivities?: number;
+  recentActivities?: number;
 }
 
 const AdminManagementPage: React.FC = () => {
@@ -23,6 +27,8 @@ const AdminManagementPage: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(100);
 
   useEffect(() => {
     // Check if user is superadmin
@@ -40,12 +46,26 @@ const AdminManagementPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [usersData, stats] = await Promise.all([
+      const [usersData, stats, inventoryData, logsData] = await Promise.all([
         userService.getAllUsers(),
-        userService.getUserStats()
+        userService.getUserStats(),
+        inventoryService.getAllItems(),
+        activityService.getLogs()
       ]);
       setUsers(usersData);
-      setSystemStats(stats);
+
+      // Enhanced stats with real data
+      const enhancedStats = {
+        ...stats,
+        totalInventoryItems: inventoryData.length,
+        lowStockItems: inventoryData.filter(item => item.status === 'low_stock').length,
+        totalActivities: logsData.length,
+        recentActivities: logsData.filter(log =>
+          new Date(log.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+        ).length
+      };
+
+      setSystemStats(enhancedStats);
       setError(null);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -91,6 +111,12 @@ const AdminManagementPage: React.FC = () => {
     return matchesSearch && matchesRole;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
   // Don't render anything if not superadmin
   if (currentUser && currentUser.role !== 'superadmin') {
     return (
@@ -120,13 +146,21 @@ const AdminManagementPage: React.FC = () => {
           onChange={(e) => setRoleFilter(e.target.value)}
         >
           <option value="all">All Roles</option>
-          <option value="user">User</option>
           <option value="admin">Admin</option>
           <option value="superadmin">Super Admin</option>
-          <option value="doctor">Doctor</option>
-          <option value="nurse">Nurse</option>
-          <option value="dentist">Dentist</option>
-          <option value="technician">Technician</option>
+        </select>
+        <select
+          className="filter-select"
+          value={itemsPerPage}
+          onChange={(e) => {
+            setItemsPerPage(Number(e.target.value));
+            setCurrentPage(1);
+          }}
+        >
+          <option value={10}>10 per page</option>
+          <option value={25}>25 per page</option>
+          <option value={50}>50 per page</option>
+          <option value={100}>100 per page</option>
         </select>
         <button className="btn-primary" onClick={() => setIsAddUserModalOpen(true)}>
           Add User
@@ -141,13 +175,14 @@ const AdminManagementPage: React.FC = () => {
               <th>Name</th>
               <th>Role</th>
               <th>Department</th>
-              <th>Status</th>
-              <th>Created</th>
+              <th>Position</th>
+              <th>Employee ID</th>
+              <th>Last Login</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((user) => (
+            {paginatedUsers.map((user) => (
               <tr key={user.id}>
                 <td>{user.username}</td>
                 <td>{user.first_name} {user.last_name}</td>
@@ -157,12 +192,9 @@ const AdminManagementPage: React.FC = () => {
                   </span>
                 </td>
                 <td>{user.department || 'N/A'}</td>
-                <td>
-                  <span className={`status-badge ${user.status || 'active'}`}>
-                    {user.status || 'active'}
-                  </span>
-                </td>
-                <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                <td>{user.position || 'N/A'}</td>
+                <td>{user.employee_id || 'N/A'}</td>
+                <td>{user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</td>
                 <td>
                   <div className="table-actions">
                     <button
@@ -173,7 +205,10 @@ const AdminManagementPage: React.FC = () => {
                         setIsEditUserModalOpen(true);
                       }}
                     >
-                      Edit
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
+                      </svg>
                     </button>
                     <button
                       className="btn-icon danger"
@@ -181,7 +216,12 @@ const AdminManagementPage: React.FC = () => {
                       onClick={() => handleDeleteUser(user.id, user.username)}
                       disabled={user.id === currentUser?.id}
                     >
-                      Delete
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3,6 5,6 21,6" />
+                        <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
                     </button>
                   </div>
                 </td>
@@ -189,92 +229,107 @@ const AdminManagementPage: React.FC = () => {
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
 
-  const renderSystemSettings = () => (
-    <div className="admin-section">
-      <div className="settings-grid">
-        <div className="settings-card">
-          <h3>System Configuration</h3>
-          <div className="setting-item">
-            <label>Application Name</label>
-            <input type="text" defaultValue="Meditrack" />
-          </div>
-          <div className="setting-item">
-            <label>Default User Role</label>
-            <select defaultValue="user">
-              <option value="user">User</option>
-              <option value="doctor">Doctor</option>
-              <option value="nurse">Nurse</option>
-            </select>
-          </div>
-          <div className="setting-item">
-            <label>Session Timeout (minutes)</label>
-            <input type="number" defaultValue={30} min={5} max={120} />
-          </div>
-          <button className="btn-primary">Save Settings</button>
-        </div>
+        {/* Pagination */}
+        <div className="pagination">
+          <button
+            className="pagination-btn"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+          >
+            Previous
+          </button>
 
-        <div className="settings-card">
-          <h3>Security Settings</h3>
-          <div className="setting-item">
-            <label>
-              <input type="checkbox" defaultChecked />
-              Enable activity logging
-            </label>
+          <div className="pagination-pages">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                className={`pagination-page ${page === currentPage ? 'active' : ''}`}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            ))}
           </div>
-          <div className="setting-item">
-            <label>
-              <input type="checkbox" defaultChecked />
-              Require strong passwords
-            </label>
-          </div>
-          <div className="setting-item">
-            <label>
-              <input type="checkbox" />
-              Enable two-factor authentication
-            </label>
-          </div>
-          <button className="btn-primary">Update Security</button>
-        </div>
 
-        <div className="settings-card">
-          <h3>Database Maintenance</h3>
-          <div className="maintenance-actions">
-            <button className="btn-secondary">Backup Database</button>
-            <button className="btn-secondary">Clean Activity Logs</button>
-            <button className="btn-secondary">Optimize Tables</button>
-            <button className="btn-danger">Reset System</button>
+          <div className="pagination-info">
+            Showing {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} users
           </div>
+
+          <button
+            className="pagination-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>
   );
+
 
   const renderAnalytics = () => (
     <div className="admin-section">
       <div className="analytics-grid">
         <div className="stat-card">
-          <h3>Total Users</h3>
-          <div className="stat-number">{systemStats?.totalUsers || 0}</div>
+          <div className="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{systemStats?.totalUsers || 0}</div>
+            <div className="stat-title">Total Users</div>
+            <div className="stat-change positive">Active accounts</div>
+          </div>
         </div>
 
         <div className="stat-card">
-          <h3>Active Sessions</h3>
-          <div className="stat-number">12</div>
+          <div className="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+              <rect x="7" y="7" width="3" height="9" stroke="currentColor" strokeWidth="2"/>
+              <rect x="14" y="7" width="3" height="5" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{systemStats?.totalInventoryItems || 0}</div>
+            <div className="stat-title">Total Inventory Items</div>
+            <div className="stat-change positive">All departments</div>
+          </div>
         </div>
 
         <div className="stat-card">
-          <h3>System Uptime</h3>
-          <div className="stat-number">99.9%</div>
+          <div className="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{systemStats?.lowStockItems || 0}</div>
+            <div className="stat-title">Low Stock Items</div>
+            <div className={`stat-change ${(systemStats?.lowStockItems || 0) > 0 ? 'warning' : 'positive'}`}>
+              {(systemStats?.lowStockItems || 0) > 0 ? 'Needs attention' : 'All sufficient'}
+            </div>
+          </div>
         </div>
 
         <div className="stat-card">
-          <h3>Storage Used</h3>
-          <div className="stat-number">2.4 GB</div>
+          <div className="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 20h9" stroke="currentColor" strokeWidth="2"/>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{systemStats?.totalActivities || 0}</div>
+            <div className="stat-title">Total Activities</div>
+            <div className="stat-change positive">All time</div>
+          </div>
         </div>
+
       </div>
 
       <div className="chart-section">
@@ -314,12 +369,6 @@ const AdminManagementPage: React.FC = () => {
           User Management
         </button>
         <button
-          className={`admin-tab ${activeTab === 'settings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('settings')}
-        >
-          System Settings
-        </button>
-        <button
           className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`}
           onClick={() => setActiveTab('analytics')}
         >
@@ -337,7 +386,6 @@ const AdminManagementPage: React.FC = () => {
       ) : (
         <>
           {activeTab === 'users' && renderUserManagement()}
-          {activeTab === 'settings' && renderSystemSettings()}
           {activeTab === 'analytics' && renderAnalytics()}
         </>
       )}

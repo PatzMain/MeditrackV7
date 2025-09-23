@@ -250,6 +250,11 @@
   color: #4b5563;
 }
 
+.status-badge.maintenance {
+  background-color: #fbbf24;
+  color: #92400e;
+}
+
 .table-actions {
   display: flex;
   gap: 8px;
@@ -287,4 +292,63 @@
 .error-container {
   flex-direction: column;
   gap: 16px;
+}
+
+/* Item Highlighting Styles */
+.highlighted-item {
+  background-color: rgba(255, 255, 0, 0.15) !important;
+}
+
+.highlighted-item:hover {
+  background-color: rgba(255, 255, 0, 0.25) !important;
+}
+
+/* Placeholder Text Styles */
+.placeholder-text {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+/* Empty State Styles */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  text-align: center;
+  background: #fafbfc;
+  border: 2px dashed #e5e7eb;
+  border-radius: 12px;
+  margin: 24px 0;
+}
+
+.empty-state-icon {
+  margin-bottom: 24px;
+  color: #9ca3af;
+}
+
+.empty-state-content h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.empty-state-content p {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-bottom: 32px;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.empty-state-content .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
 }

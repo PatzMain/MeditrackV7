@@ -195,15 +195,33 @@ const SideBar: React.FC<SideBarProps> = ({ collapsed, userRole, onToggleSidebar,
         >
           <div className="user-avatar">
             <img
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || 'User')}&background=1e40af&color=ffffff&size=40`}
-              alt={user?.username || 'User'}
+              src={
+                user?.avatar_url ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  user?.first_name && user?.last_name
+                    ? `${user.first_name}+${user.last_name}`
+                    : user?.username || 'User'
+                )}&background=1e40af&color=ffffff&size=40`
+              }
+              alt={user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : user?.username || 'User'}
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
-                (e.currentTarget.nextElementSibling as HTMLElement)!.style.display = 'flex';
+                // If custom avatar fails, try fallback to ui-avatars
+                const img = e.currentTarget as HTMLImageElement;
+                if (user?.avatar_url && img.src === user.avatar_url) {
+                  img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    user?.first_name && user?.last_name
+                      ? `${user.first_name}+${user.last_name}`
+                      : user?.username || 'User'
+                  )}&background=1e40af&color=ffffff&size=40`;
+                } else {
+                  // If both fail, show text fallback
+                  img.style.display = 'none';
+                  (img.nextElementSibling as HTMLElement)!.style.display = 'flex';
+                }
               }}
             />
             <div className="avatar-fallback" style={{ display: 'none' }}>
-              {user?.username?.charAt(0).toUpperCase() || 'U'}
+              {user?.first_name?.charAt(0).toUpperCase() || user?.username?.charAt(0).toUpperCase() || 'U'}
             </div>
           </div>
 

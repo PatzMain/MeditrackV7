@@ -1,9 +1,11 @@
 import { optimizedInventoryService, optimizedUserService } from './optimizedSupabaseService';
+import { activityService } from './supabaseService';
+import { supabase } from '../lib/supabase';
 import { cacheService, CACHE_TTL } from './cacheService';
 
 export interface SearchResult {
   id: string;
-  type: 'inventory' | 'user' | 'action';
+  type: 'inventory' | 'user' | 'action' | 'archive' | 'log';
   title: string;
   subtitle?: string;
   description?: string;
@@ -12,6 +14,7 @@ export interface SearchResult {
   url?: string;
   action?: () => void;
   priority: number; // Higher priority items appear first
+  itemData?: any; // Store full item data for navigation purposes
 }
 
 export interface SearchCategory {
@@ -33,17 +36,8 @@ class UniversalSearchService {
   private readonly MIN_QUERY_LENGTH = 2;
   private readonly MAX_RESULTS_PER_CATEGORY = 5;
 
-  // Quick actions and navigation shortcuts
+  // Quick actions and navigation shortcuts (excluding dashboard per requirement)
   private readonly QUICK_ACTIONS: SearchResult[] = [
-    {
-      id: 'nav-dashboard',
-      type: 'action',
-      title: 'Dashboard',
-      subtitle: 'Go to dashboard',
-      icon: '📊',
-      url: '/dashboard',
-      priority: 100
-    },
     {
       id: 'nav-inventory',
       type: 'action',
@@ -51,7 +45,7 @@ class UniversalSearchService {
       subtitle: 'Manage medical supplies and equipment',
       icon: '📦',
       url: '/inventory',
-      priority: 85
+      priority: 90
     },
     {
       id: 'nav-archives',
@@ -60,7 +54,7 @@ class UniversalSearchService {
       subtitle: 'View archived records',
       icon: '📁',
       url: '/archives',
-      priority: 80
+      priority: 85
     },
     {
       id: 'nav-logs',
@@ -69,6 +63,15 @@ class UniversalSearchService {
       subtitle: 'View system activity',
       icon: '📋',
       url: '/logs',
+      priority: 80
+    },
+    {
+      id: 'nav-admin',
+      type: 'action',
+      title: 'Admin Management',
+      subtitle: 'Manage users and system settings',
+      icon: '🔧',
+      url: '/admin-management',
       priority: 75
     },
     {
@@ -87,19 +90,21 @@ class UniversalSearchService {
       subtitle: 'Add new medical supply',
       icon: '📦',
       action: () => console.log('Open add inventory modal'),
-      priority: 60
+      priority: 65
     }
   ];
 
-  // Common search terms and shortcuts
+  // Common search terms and shortcuts (excluding dashboard)
   private readonly SEARCH_SHORTCUTS: Record<string, string[]> = {
-    'dashboard': ['home', 'overview', 'stats', 'summary'],
-    'inventory': ['supplies', 'medicine', 'equipment', 'stock'],
-    'archive': ['archives', 'history', 'old', 'deleted'],
-    'logs': ['activity', 'audit', 'history', 'events'],
-    'profile': ['settings', 'account', 'user', 'preferences'],
-    'add': ['new', 'create', 'register', '+'],
-    'search': ['find', 'look', 'locate', 'query']
+    'inventory': ['supplies', 'medicine', 'equipment', 'stock', 'medical', 'items'],
+    'archive': ['archives', 'history', 'old', 'deleted', 'stored', 'past'],
+    'logs': ['activity', 'audit', 'history', 'events', 'actions', 'tracking'],
+    'admin': ['management', 'users', 'system', 'settings', 'control'],
+    'profile': ['settings', 'account', 'user', 'preferences', 'personal'],
+    'add': ['new', 'create', 'register', '+', 'insert'],
+    'search': ['find', 'look', 'locate', 'query', 'filter'],
+    'user': ['admin', 'staff', 'employee', 'people', 'account'],
+    'medical': ['medicine', 'drug', 'pharmaceutical', 'treatment', 'healthcare']
   };
 
   async search(query: string): Promise<UniversalSearchResponse> {
@@ -120,11 +125,15 @@ class UniversalSearchService {
       const [
         inventoryResults,
         userResults,
-        actionResults
+        actionResults,
+        archiveResults,
+        logResults
       ] = await Promise.all([
         this.searchInventory(normalizedQuery),
         this.searchUsers(normalizedQuery),
-        this.searchActions(normalizedQuery)
+        this.searchActions(normalizedQuery),
+        this.searchArchives(normalizedQuery),
+        this.searchLogs(normalizedQuery)
       ]);
 
       const categories: SearchCategory[] = [
@@ -137,6 +146,16 @@ class UniversalSearchService {
           name: 'Inventory',
           results: inventoryResults.slice(0, this.MAX_RESULTS_PER_CATEGORY),
           total: inventoryResults.length
+        },
+        {
+          name: 'Archives',
+          results: archiveResults.slice(0, this.MAX_RESULTS_PER_CATEGORY),
+          total: archiveResults.length
+        },
+        {
+          name: 'Activity Logs',
+          results: logResults.slice(0, this.MAX_RESULTS_PER_CATEGORY),
+          total: logResults.length
         },
         {
           name: 'Users',
@@ -201,6 +220,7 @@ class UniversalSearchService {
 
           return items
             .filter(item =>
+              (item.code || '').toLowerCase().includes(query) ||
               (item.generic_name || '').toLowerCase().includes(query) ||
               (item.brand_name || '').toLowerCase().includes(query) ||
               (item.category || '').toLowerCase().includes(query) ||
@@ -214,8 +234,9 @@ class UniversalSearchService {
               description: `Stock: ${item.stock_quantity} ${item.unit || 'units'}`,
               metadata: `Status: ${item.status?.replace('_', ' ')}`,
               icon: this.getInventoryIcon(item.classification),
-              url: `/inventory?search=${encodeURIComponent(item.generic_name || item.brand_name)}`,
-              priority: 45
+              url: `/inventory?itemId=${item.id}&department=${item.department}&classification=${item.classification}`,
+              priority: 45,
+              itemData: item // Store full item data for navigation
             }))
             .sort((a: any, b: any) => b.priority - a.priority);
         },
@@ -252,7 +273,7 @@ class UniversalSearchService {
               description: user.department ? `Department: ${user.department}` : undefined,
               metadata: user.employee_id ? `ID: ${user.employee_id}` : undefined,
               icon: '👨‍⚕️',
-              url: `/admin?search=${encodeURIComponent(user.username)}`,
+              url: `/admin-management`,
               priority: 40
             }))
             .sort((a: any, b: any) => b.priority - a.priority);
@@ -262,6 +283,95 @@ class UniversalSearchService {
       );
     } catch (error) {
       console.error('Error searching users:', error);
+      return [];
+    }
+  }
+
+  private async searchArchives(query: string): Promise<SearchResult[]> {
+    try {
+      return await cacheService.cachedCall(
+        'search',
+        'archives',
+        async () => {
+          // Get archived inventory items (this is what ArchivesPage actually shows)
+          const { data: archivedItems, error } = await supabase
+            .from('inventory_items')
+            .select('*')
+            .eq('status', 'archived');
+
+          if (error) {
+            console.error('Error fetching archived items:', error);
+            return [];
+          }
+
+          return archivedItems
+            .filter((item: any) =>
+              (item.generic_name || '').toLowerCase().includes(query) ||
+              (item.brand_name || '').toLowerCase().includes(query) ||
+              (item.code || '').toLowerCase().includes(query) ||
+              (item.category || '').toLowerCase().includes(query) ||
+              (item.notes || '').toLowerCase().includes(query)
+            )
+            .map((item: any) => ({
+              id: `archive_inv_${item.id}`,
+              type: 'archive' as const,
+              title: item.generic_name || item.brand_name || 'Unknown Item',
+              subtitle: 'Archived Inventory Item',
+              description: `Category: ${item.category || 'General'} - ${item.classification || 'Unknown'}`,
+              metadata: `Archived: ${new Date(item.updated_at || item.created_at).toLocaleDateString()}`,
+              icon: this.getInventoryIcon(item.classification),
+              url: `/archives?highlightId=inv_${item.id}`,
+              priority: 35,
+              itemData: item
+            }))
+            .sort((a: any, b: any) => b.priority - a.priority);
+        },
+        { query },
+        CACHE_TTL.MEDIUM
+      );
+    } catch (error) {
+      console.error('Error searching archives:', error);
+      return [];
+    }
+  }
+
+  private async searchLogs(query: string): Promise<SearchResult[]> {
+    try {
+      return await cacheService.cachedCall(
+        'search',
+        'logs',
+        async () => {
+          const logs = await activityService.getLogs();
+
+          return logs
+            .filter((log: any) =>
+              (log.action || '').toLowerCase().includes(query) ||
+              (log.description || '').toLowerCase().includes(query) ||
+              (log.category || '').toLowerCase().includes(query) ||
+              (log.users?.username || '').toLowerCase().includes(query) ||
+              (log.users?.first_name || '').toLowerCase().includes(query) ||
+              (log.users?.last_name || '').toLowerCase().includes(query)
+            )
+            .map((log: any) => ({
+              id: `log_${log.id}`,
+              type: 'log' as const,
+              title: log.action || 'Activity Log',
+              subtitle: log.description || 'System activity',
+              description: `User: ${log.users?.username || 'System'}`,
+              metadata: `${new Date(log.timestamp).toLocaleDateString()} - ${log.severity || 'info'}`,
+              icon: this.getLogIcon(log.severity),
+              url: `/logs?highlightId=${log.id}`,
+              priority: 30,
+              itemData: log
+            }))
+            .sort((a: any, b: any) => new Date(b.itemData.timestamp).getTime() - new Date(a.itemData.timestamp).getTime())
+            .slice(0, 10); // Limit logs to recent 10
+        },
+        { query },
+        CACHE_TTL.SHORT
+      );
+    } catch (error) {
+      console.error('Error searching logs:', error);
       return [];
     }
   }
@@ -326,6 +436,37 @@ class UniversalSearchService {
         return '🔬';
       default:
         return '📦';
+    }
+  }
+
+  private getArchiveIcon(type?: string): string {
+    switch ((type || '').toLowerCase()) {
+      case 'inventory item':
+      case 'inventory':
+        return '📦';
+      case 'medical record':
+      case 'record':
+        return '📋';
+      case 'patient':
+        return '👤';
+      case 'user':
+        return '👨‍⚕️';
+      default:
+        return '📁';
+    }
+  }
+
+  private getLogIcon(severity?: string): string {
+    switch ((severity || '').toLowerCase()) {
+      case 'error':
+        return '❌';
+      case 'warning':
+        return '⚠️';
+      case 'success':
+        return '✅';
+      case 'info':
+      default:
+        return '📝';
     }
   }
 

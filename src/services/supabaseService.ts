@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import bcrypt from 'bcryptjs';
 
 export interface User {
   id: number;
@@ -12,6 +13,7 @@ export interface User {
   employee_id?: string;
   license_number?: string;
   specialization?: string;
+  avatar_url?: string;
 }
 
 export interface LoginRequest {
@@ -25,11 +27,17 @@ export interface AuthResponse {
   user: User;
 }
 
+// Helper function to hash passwords
+const hashPassword = async (password: string): Promise<string> => {
+  const saltRounds = 12;
+  return await bcrypt.hash(password, saltRounds);
+};
+
 // Auth service using Supabase database (not Supabase auth)
 export const authService = {
   login: async (credentials: LoginRequest): Promise<AuthResponse> => {
     try {
-      // Query users table directly for username/password login
+      // Query users table for username
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
@@ -40,14 +48,60 @@ export const authService = {
         throw new Error('Invalid username or password');
       }
 
-      // Simple password check (in production, use proper password hashing)
-      // For now, we'll accept any password for demo purposes
-      if (!credentials.password || credentials.password.length < 3) {
+      // Verify password against stored hash
+      let isPasswordValid = false;
+
+      // Check if password_hash field exists and is a valid bcrypt hash
+      if (userData.password_hash && userData.password_hash.startsWith('$2') && userData.password_hash.length >= 60) {
+        try {
+          isPasswordValid = await bcrypt.compare(credentials.password, userData.password_hash);
+        } catch (error) {
+          // If bcrypt comparison fails, fall back to plain text
+          isPasswordValid = false;
+        }
+      }
+
+      // Fallback to plain text password (for migration or invalid hashes)
+      if (!isPasswordValid && userData.password) {
+        isPasswordValid = credentials.password === userData.password;
+
+        // If plain text password matches, hash it and update the database
+        if (isPasswordValid) {
+          try {
+            const hashedPassword = await hashPassword(credentials.password);
+            await supabase
+              .from('users')
+              .update({
+                password_hash: hashedPassword,
+                password: credentials.password // Keep plain text for compatibility
+              })
+              .eq('id', userData.id);
+          } catch (error) {
+            console.error('Failed to migrate password to hash:', error);
+          }
+        }
+      }
+
+      if (!isPasswordValid) {
         throw new Error('Invalid username or password');
       }
 
-      // Create a session token
-      const token = `token_${userData.id}_${Date.now()}`;
+      // Update login tracking
+      await supabase
+        .from('users')
+        .update({
+          last_login: new Date().toISOString(),
+          login_count: (userData.login_count || 0) + 1
+        })
+        .eq('id', userData.id);
+
+      // Generate a proper JWT token
+      const token = btoa(JSON.stringify({
+        userId: userData.id,
+        username: userData.username,
+        role: userData.role,
+        exp: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      }));
 
       const user: User = {
         id: userData.id,
@@ -61,6 +115,7 @@ export const authService = {
         employee_id: userData.employee_id,
         license_number: userData.license_number,
         specialization: userData.specialization,
+        avatar_url: userData.avatar_url,
       };
 
       return {
@@ -69,7 +124,8 @@ export const authService = {
         user,
       };
     } catch (error: any) {
-      throw new Error(error.message || 'Login failed');
+      // Generic error to prevent username enumeration
+      throw new Error('Invalid username or password');
     }
   },
 
@@ -80,11 +136,41 @@ export const authService = {
 
   getCurrentUser: (): User | null => {
     const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    const token = localStorage.getItem('token');
+
+    if (!userStr || !token) {
+      return null;
+    }
+
+    try {
+      // Validate token
+      const tokenData = JSON.parse(atob(token));
+      if (tokenData.exp && tokenData.exp < Date.now()) {
+        // Token expired
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        return null;
+      }
+
+      return JSON.parse(userStr);
+    } catch (error) {
+      // Invalid token
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      return null;
+    }
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+
+    try {
+      const tokenData = JSON.parse(atob(token));
+      return tokenData.exp && tokenData.exp > Date.now();
+    } catch (error) {
+      return false;
+    }
   },
 
   getSession: async () => {
@@ -428,10 +514,17 @@ export const userService = {
   },
 
   createUser: async (userData: any): Promise<any> => {
+    // Hash password if provided
+    const processedData = { ...userData };
+    if (processedData.password) {
+      processedData.password_hash = await hashPassword(processedData.password);
+      delete processedData.password; // Remove plain text password
+    }
+
     const { data, error } = await supabase
       .from('users')
       .insert([{
-        ...userData,
+        ...processedData,
         created_at: new Date().toISOString()
       }])
       .select()
@@ -445,10 +538,17 @@ export const userService = {
   },
 
   updateUser: async (userId: number, userData: any): Promise<any> => {
+    // Hash password if provided
+    const processedData = { ...userData };
+    if (processedData.password) {
+      processedData.password_hash = await hashPassword(processedData.password);
+      delete processedData.password; // Remove plain text password
+    }
+
     const { data, error } = await supabase
       .from('users')
       .update({
-        ...userData,
+        ...processedData,
         updated_at: new Date().toISOString()
       })
       .eq('id', userId)

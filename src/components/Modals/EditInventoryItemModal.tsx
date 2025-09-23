@@ -45,7 +45,7 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
           <div className="modal-body">
             <div className="form-group">
               <label htmlFor="code">Code</label>
-              <input type="text" id="code" name="code" value={formData.code || ''} onChange={handleChange} required />
+              <input type="text" id="code" name="code" value={formData.code || ''} onChange={handleChange} />
             </div>
             <div className="form-group">
               <label htmlFor="generic_name">Generic Name</label>
@@ -55,14 +55,8 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
               <label htmlFor="brand_name">Brand Name</label>
               <input type="text" id="brand_name" name="brand_name" value={formData.brand_name || ''} onChange={handleChange} required />
             </div>
-            <div className="form-group">
-              <label htmlFor="classification_id">Classification</label>
-              <select id="classification_id" name="classification_id" value={formData.classification_id} onChange={handleChange}>
-                {classifications.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* Hidden classification field - preserves existing classification */}
+            <input type="hidden" name="classification_id" value={formData.classification_id} />
             <div className="form-group">
               <label htmlFor="stock_quantity">Stock Quantity</label>
               <input type="number" id="stock_quantity" name="stock_quantity" value={formData.stock_quantity || 0} onChange={handleChange} required />
@@ -86,6 +80,18 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
             <div className="form-group">
               <label htmlFor="notes">Notes</label>
               <textarea id="notes" name="notes" value={formData.notes || ''} onChange={handleChange}></textarea>
+            </div>
+            <div className="form-group">
+              <label htmlFor="status">Status</label>
+              <select id="status" name="status" value={formData.status || 'active'} onChange={handleChange}>
+                <option value="active">Active</option>
+                <option value="low_stock">Low Stock</option>
+                <option value="out_of_stock">Out of Stock</option>
+                <option value="expired">Expired</option>
+                {formData.classification?.toLowerCase() === 'equipment' && (
+                  <option value="maintenance">Maintenance</option>
+                )}
+              </select>
             </div>
           </div>
           <div className="modal-footer">

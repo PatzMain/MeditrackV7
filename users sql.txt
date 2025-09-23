@@ -15,13 +15,7 @@ create table public.users (
   updated_at timestamp with time zone null default now(),
   avatar_url text null,
   bio text null,
-  date_of_birth date null,
   gender character varying(20) null,
-  address text null,
-  city character varying(100) null,
-  state character varying(100) null,
-  zip_code character varying(20) null,
-  country character varying(100) null,
   emergency_contact_name character varying(255) null,
   emergency_contact_phone character varying(50) null,
   emergency_contact_relationship character varying(100) null,
@@ -52,54 +46,3 @@ execute FUNCTION create_user_defaults ();
 create trigger update_users_updated_at BEFORE
 update on users for EACH row
 execute FUNCTION update_updated_at_column ();
-
-create table public.user_files (
-  id bigserial not null,
-  user_id bigint null,
-  file_type character varying(50) not null,
-  file_name character varying(255) not null,
-  file_path text not null,
-  file_size bigint null,
-  mime_type character varying(100) null,
-  is_current boolean null default true,
-  uploaded_at timestamp with time zone null default now(),
-  constraint user_files_pkey primary key (id),
-  constraint user_files_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE
-) TABLESPACE pg_default;
-
-create index IF not exists idx_user_files_user_id on public.user_files using btree (user_id) TABLESPACE pg_default;
-
-create index IF not exists idx_user_files_type on public.user_files using btree (file_type, is_current) TABLESPACE pg_default;
-
-create table public.user_activity (
-  id serial not null,
-  user_id integer null,
-  action character varying(50) not null,
-  category character varying(100) null,
-  description text null,
-  timestamp timestamp with time zone null default now(),
-  user_agent text null,
-  severity character varying(20) null default 'info'::character varying,
-  details jsonb null,
-  constraint user_activity_pkey primary key (id),
-  constraint user_activity_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE,
-  constraint user_activity_severity_check check (
-    (
-      (severity)::text = any (
-        (
-          array[
-            'info'::character varying,
-            'warning'::character varying,
-            'error'::character varying
-          ]
-        )::text[]
-      )
-    )
-  )
-) TABLESPACE pg_default;
-
-create index IF not exists idx_user_activity_user_id on public.user_activity using btree (user_id) TABLESPACE pg_default;
-
-create index IF not exists idx_user_activity_timestamp on public.user_activity using btree ("timestamp") TABLESPACE pg_default;
-
-create index IF not exists idx_user_activity_action on public.user_activity using btree (action) TABLESPACE pg_default;

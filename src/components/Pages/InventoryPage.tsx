@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { inventoryService, activityService } from '../../services/supabaseService';
 import './InventoryPage.css';
 import './PagesStyles.css';
@@ -25,6 +26,13 @@ const InventoryPage: React.FC = () => {
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [classifications, setClassifications] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(100);
+  const [highlightedItemId, setHighlightedItemId] = useState<number | null>(null);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  // const tableRef = useRef<HTMLDivElement>(null); // Reserved for future scrolling functionality
 
   const getClassificationFromTab = (tab: string) => {
     switch (tab) {
@@ -32,6 +40,15 @@ const InventoryPage: React.FC = () => {
       case 'supplies': return 'Supplies';
       case 'equipment': return 'Equipment';
       default: return 'Medicines';
+    }
+  };
+
+  const getTabFromClassification = (classification: string) => {
+    switch (classification?.toLowerCase()) {
+      case 'medicines': return 'medicines';
+      case 'supplies': return 'supplies';
+      case 'equipment': return 'equipment';
+      default: return 'medicines';
     }
   };
 
@@ -51,20 +68,75 @@ const InventoryPage: React.FC = () => {
     }
   }, [activeTab, activeDepartment]);
 
-  const fetchClassifications = async () => {
+  const fetchClassifications = useCallback(async () => {
     try {
       const data = await inventoryService.getClassifications();
       setClassifications(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Error fetching classifications:', error);
     }
-  };
+  }, []);
 
+
+  // Handle URL parameters on mount and location change
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const itemId = searchParams.get('itemId');
+    const department = searchParams.get('department');
+    const classification = searchParams.get('classification');
+
+    if (itemId) {
+      setHighlightedItemId(parseInt(itemId));
+    }
+
+    if (department && department !== activeDepartment) {
+      setActiveDepartment(department);
+    }
+
+    if (classification) {
+      const tabName = getTabFromClassification(classification);
+      if (tabName !== activeTab) {
+        setActiveTab(tabName);
+      }
+    }
+
+    // Clear URL parameters after processing to keep URL clean
+    if (itemId || department || classification) {
+      const timer = setTimeout(() => {
+        navigate('/inventory', { replace: true });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [location.search, navigate, activeDepartment, activeTab]);
 
   useEffect(() => {
     fetchInventoryData();
     fetchClassifications();
-  }, [fetchInventoryData]);
+  }, [fetchInventoryData, fetchClassifications]);
+
+  // Scroll to and highlight item after data loads
+  useEffect(() => {
+    if (highlightedItemId && inventoryData.length > 0 && !loading) {
+      const timer = setTimeout(() => {
+        const itemElement = document.getElementById(`inventory-item-${highlightedItemId}`);
+        if (itemElement) {
+          // Scroll to the item
+          itemElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+
+          // Clear highlight after 5 seconds
+          setTimeout(() => {
+            setHighlightedItemId(null);
+          }, 5000);
+        }
+      }, 500); // Small delay to ensure rendering is complete
+
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedItemId, inventoryData, loading]);
 
   const getSingularClassification = (tab: string) => {
     switch (tab) {
@@ -104,6 +176,25 @@ const InventoryPage: React.FC = () => {
 
     return items;
   }, [inventoryData, searchQuery, statusFilter, sortColumn, sortDirection]);
+
+  const inventoryStats = useMemo(() => {
+    const lowStockItems = inventoryData.filter(item => item.status === 'low_stock');
+    const outOfStockItems = inventoryData.filter(item => item.status === 'out_of_stock');
+    const expiredItems = inventoryData.filter(item => item.status === 'expired');
+
+    return {
+      totalItems: inventoryData.length,
+      lowStockItems: lowStockItems.length,
+      outOfStockItems: outOfStockItems.length,
+      expiredItems: expiredItems.length
+    };
+  }, [inventoryData]);
+
+  // Pagination
+  const totalPages = Math.ceil(sortedAndFilteredItems.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedItems = sortedAndFilteredItems.slice(startIndex, endIndex);
 
   const handleSaveItem = async (updatedItem: any) => {
     try {
@@ -153,6 +244,80 @@ const InventoryPage: React.FC = () => {
     }
   };
 
+  const renderStatCards = () => {
+    const statCards = [
+      {
+        title: `Total ${getClassificationFromTab(activeTab)}`,
+        value: inventoryStats.totalItems.toString(),
+        change: `${activeDepartment} department`,
+        changeType: 'neutral',
+        icon: (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+            <rect x="7" y="7" width="3" height="9" stroke="currentColor" strokeWidth="2"/>
+            <rect x="14" y="7" width="3" height="5" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+        )
+      },
+      {
+        title: 'Low Stock',
+        value: inventoryStats.lowStockItems.toString(),
+        change: inventoryStats.lowStockItems > 0 ? 'Needs reorder' : 'All sufficient',
+        changeType: inventoryStats.lowStockItems > 0 ? 'warning' : 'positive',
+        icon: (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+        )
+      },
+      {
+        title: 'Out of Stock',
+        value: inventoryStats.outOfStockItems.toString(),
+        change: inventoryStats.outOfStockItems > 0 ? 'Critical' : 'None',
+        changeType: inventoryStats.outOfStockItems > 0 ? 'danger' : 'positive',
+        icon: (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+            <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
+            <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+        )
+      },
+      {
+        title: 'Expired Items',
+        value: inventoryStats.expiredItems.toString(),
+        change: inventoryStats.expiredItems > 0 ? 'Dispose required' : 'All current',
+        changeType: inventoryStats.expiredItems > 0 ? 'danger' : 'positive',
+        icon: (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+            <line x1="12" y1="6" x2="12" y2="12" stroke="currentColor" strokeWidth="2"/>
+            <circle cx="12" cy="16" r="1" fill="currentColor"/>
+          </svg>
+        )
+      }
+    ];
+
+    return (
+      <div className="stats-grid">
+        {statCards.map((stat, index) => (
+          <div key={index} className="stat-card">
+            <div className="stat-icon">
+              {stat.icon}
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{stat.value}</div>
+              <div className="stat-title">{stat.title}</div>
+              <div className={`stat-change ${stat.changeType}`}>
+                {stat.change}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderDataTable = () => (
     <div className="data-table">
       <table>
@@ -169,39 +334,45 @@ const InventoryPage: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {sortedAndFilteredItems.map((item) => (
-            <tr key={item.id}>
-              <td>{item.code}</td>
-              <td>{item.generic_name}</td>
-              <td>{item.brand_name}</td>
-              <td>{item.category}</td>
-              <td>{item.stock_quantity} {item.unit_of_measurement}</td>
-              <td>{item.expiration_date}</td>
+          {paginatedItems.map((item) => (
+            <tr
+              key={item.id}
+              id={`inventory-item-${item.id}`}
+              className={highlightedItemId === item.id ? 'highlighted-item' : ''}
+            >
+              <td>{item.code || <span className="placeholder-text">--</span>}</td>
+              <td>{item.generic_name || <span className="placeholder-text">No name</span>}</td>
+              <td>{item.brand_name || <span className="placeholder-text">No brand</span>}</td>
+              <td>{item.category || <span className="placeholder-text">Uncategorized</span>}</td>
+              <td>
+                {item.stock_quantity || 0} {item.unit_of_measurement || <span className="placeholder-text">units</span>}
+              </td>
+              <td>{item.expiration_date || <span className="placeholder-text">No expiry</span>}</td>
               <td>
                 <span className={getStatusBadgeClass(item.status)}>
-                  {item.status.replace(/_/g, ' ')}
+                  {item.status ? item.status.replace(/_/g, ' ') : 'Unknown'}
                 </span>
               </td>
               <td>
                 <div className="table-actions">
                   <button className="btn-icon" title="View" onClick={() => { setSelectedItem(item); setIsViewModalOpen(true); }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
                     </svg>
                   </button>
                   <button className="btn-icon" title="Edit" onClick={() => { setSelectedItem(item); setIsEditModalOpen(true); }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
                     </svg>
                   </button>
                   <button className="btn-icon danger" title="Archive" onClick={() => { setSelectedItem(item); setIsArchiveModalOpen(true); }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect width="20" height="5" x="2" y="3" rx="1"/>
-                      <path d="m4 8 16 0"/>
-                      <path d="m6 8 0 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l0-13"/>
-                      <path d="m8 8 0-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2l0 2"/>
+                      <rect width="20" height="5" x="2" y="3" rx="1" />
+                      <path d="m4 8 16 0" />
+                      <path d="m6 8 0 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l0-13" />
+                      <path d="m8 8 0-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2l0 2" />
                     </svg>
                   </button>
                 </div>
@@ -210,6 +381,41 @@ const InventoryPage: React.FC = () => {
           ))}
         </tbody>
       </table>
+
+      {/* Pagination */}
+      <div className="pagination">
+        <button
+          className="pagination-btn"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(currentPage - 1)}
+        >
+          Previous
+        </button>
+
+        <div className="pagination-pages">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button
+              key={page}
+              className={`pagination-page ${page === currentPage ? 'active' : ''}`}
+              onClick={() => setCurrentPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+
+        <div className="pagination-info">
+          Showing {startIndex + 1}-{Math.min(endIndex, sortedAndFilteredItems.length)} of {sortedAndFilteredItems.length} items
+        </div>
+
+        <button
+          className="pagination-btn"
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(currentPage + 1)}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 
@@ -259,6 +465,8 @@ const InventoryPage: React.FC = () => {
         </div>
 
         <div className="inventory-main">
+          {renderStatCards()}
+
           <div className="page-controls">
             <div className="search-box">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -280,6 +488,19 @@ const InventoryPage: React.FC = () => {
               <option value="out_of_stock">Out of Stock</option>
               <option value="expired">Expired</option>
             </select>
+            <select
+              className="filter-select"
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+              <option value={100}>100 per page</option>
+            </select>
             <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
               Add {getSingularClassification(activeTab)}
             </button>
@@ -291,6 +512,27 @@ const InventoryPage: React.FC = () => {
             <div className="error-container">
               <div className="error-message">{error}</div>
               <button className="btn-secondary" onClick={fetchInventoryData}>Retry</button>
+            </div>
+          ) : sortedAndFilteredItems.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <rect x="7" y="7" width="3" height="9"/>
+                  <rect x="14" y="7" width="3" height="5"/>
+                </svg>
+              </div>
+              <div className="empty-state-content">
+                <h3>No {getClassificationFromTab(activeTab)} Found</h3>
+                <p>There are currently no {getClassificationFromTab(activeTab).toLowerCase()} in the {activeDepartment} department{searchQuery && ` matching "${searchQuery}"`}.</p>
+                <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Add First {getSingularClassification(activeTab)}
+                </button>
+              </div>
             </div>
           ) : (
             renderDataTable()
@@ -306,6 +548,7 @@ const InventoryPage: React.FC = () => {
         onSave={handleAddItem}
         department={activeDepartment}
         classifications={classifications}
+        activeClassificationTab={activeTab}
       />}
     </div>
   );

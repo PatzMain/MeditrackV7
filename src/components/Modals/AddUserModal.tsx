@@ -11,7 +11,8 @@ interface AddUserModalProps {
 const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     username: '',
-    role: 'user',
+    password: '',
+    role: 'admin',
     first_name: '',
     last_name: '',
     phone: '',
@@ -20,8 +21,11 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave }) 
     employee_id: '',
     license_number: '',
     specialization: '',
-    email: '',
-    status: 'active'
+    bio: '',
+    gender: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    emergency_contact_relationship: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -29,7 +33,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave }) 
 
   if (!isOpen) return null;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -58,7 +62,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave }) 
       // Reset form
       setFormData({
         username: '',
-        role: 'user',
+        password: '',
+        role: 'admin',
         first_name: '',
         last_name: '',
         phone: '',
@@ -67,8 +72,11 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave }) 
         employee_id: '',
         license_number: '',
         specialization: '',
-        email: '',
-        status: 'active'
+        bio: '',
+        gender: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        emergency_contact_relationship: ''
       });
     } catch (error: any) {
       setError(error.message || 'Failed to create user');
@@ -113,6 +121,18 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave }) 
               </div>
 
               <div className="form-group">
+                <label>Password *</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter password"
+                />
+              </div>
+
+              <div className="form-group">
                 <label>Role *</label>
                 <select
                   name="role"
@@ -120,13 +140,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave }) 
                   onChange={handleChange}
                   required
                 >
-                  <option value="user">User</option>
                   <option value="admin">Admin</option>
                   <option value="superadmin">Super Admin</option>
-                  <option value="doctor">Doctor</option>
-                  <option value="nurse">Nurse</option>
-                  <option value="dentist">Dentist</option>
-                  <option value="technician">Technician</option>
                 </select>
               </div>
 
@@ -162,13 +177,17 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave }) 
               </div>
 
               <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
+                <label>Gender</label>
+                <select
+                  name="gender"
+                  value={formData.gender}
                   onChange={handleChange}
-                />
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
 
               <div className="form-group">
@@ -233,16 +252,47 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave }) 
               </div>
 
               <div className="form-group">
-                <label>Status</label>
-                <select
-                  name="status"
-                  value={formData.status}
+                <label>Bio</label>
+                <textarea
+                  name="bio"
+                  value={formData.bio}
                   onChange={handleChange}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
-                </select>
+                  placeholder="Brief description"
+                  rows={3}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Emergency Contact Name</label>
+                <input
+                  type="text"
+                  name="emergency_contact_name"
+                  value={formData.emergency_contact_name}
+                  onChange={handleChange}
+                  placeholder="Emergency contact full name"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Emergency Contact Phone</label>
+                <input
+                  type="tel"
+                  name="emergency_contact_phone"
+                  value={formData.emergency_contact_phone}
+                  onChange={handleChange}
+                  placeholder="Emergency contact phone"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Emergency Contact Relationship</label>
+                <input
+                  type="text"
+                  name="emergency_contact_relationship"
+                  value={formData.emergency_contact_relationship}
+                  onChange={handleChange}
+                  placeholder="e.g., Spouse, Parent, Sibling"
+                />
               </div>
             </div>
           </div>
