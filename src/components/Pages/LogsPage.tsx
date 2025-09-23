@@ -44,11 +44,31 @@ const LogsPage: React.FC = () => {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const highlightId = searchParams.get('highlightId');
+    const page = searchParams.get('page');
+    const itemsPerPageParam = searchParams.get('itemsPerPage');
 
     if (highlightId) {
       setHighlightedLogId(parseInt(highlightId, 10));
-      // Clean up URL
-      navigate('/logs', { replace: true });
+    }
+
+    // Set page and items per page from universal search
+    if (page) {
+      setCurrentPage(parseInt(page));
+    }
+
+    if (itemsPerPageParam) {
+      const itemsPerPageValue = parseInt(itemsPerPageParam);
+      if ([10, 25, 50, 100].includes(itemsPerPageValue)) {
+        setItemsPerPage(itemsPerPageValue);
+      }
+    }
+
+    // Clean up URL after processing
+    if (highlightId || page || itemsPerPageParam) {
+      const timer = setTimeout(() => {
+        navigate('/logs', { replace: true });
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [location.search, navigate]);
 

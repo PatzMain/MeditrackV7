@@ -78,45 +78,121 @@ const InventoryPage: React.FC = () => {
   }, []);
 
 
-  // Handle URL parameters on mount and location change
+  // Handle URL parameters for universal search navigation
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const itemId = searchParams.get('itemId');
     const department = searchParams.get('department');
     const classification = searchParams.get('classification');
+    const page = searchParams.get('page');
+    const itemsPerPageParam = searchParams.get('itemsPerPage');
 
-    if (itemId) {
-      setHighlightedItemId(parseInt(itemId));
+    // Only process if we have URL parameters (coming from universal search)
+    if (itemId || department || classification || page || itemsPerPageParam) {
+
+      const processNavigation = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+
+          // Set pagination first
+          if (page) setCurrentPage(parseInt(page));
+          if (itemsPerPageParam) {
+            const itemsPerPageValue = parseInt(itemsPerPageParam);
+            if ([10, 25, 50, 100].includes(itemsPerPageValue)) {
+              setItemsPerPage(itemsPerPageValue);
+            }
+          }
+
+          // Determine target department and classification
+          const targetDepartment = department || activeDepartment;
+          const targetClassification = classification || getClassificationFromTab(activeTab);
+          const targetTab = classification ? getTabFromClassification(classification) : activeTab;
+
+          // Update state if needed
+          if (department && department !== activeDepartment) {
+            setActiveDepartment(department);
+          }
+          if (targetTab !== activeTab) {
+            setActiveTab(targetTab);
+          }
+
+          // Always fetch fresh data for navigation to ensure we have the right items
+          const data = await inventoryService.getItemsByDepartmentAndClassification(
+            targetDepartment,
+            getClassificationFromTab(targetTab)
+          );
+          setInventoryData(Array.isArray(data) ? data : []);
+
+          // Set the item to highlight after data is loaded
+          if (itemId) {
+            setHighlightedItemId(parseInt(itemId));
+
+            // Wait for rendering then scroll to and highlight the item
+            setTimeout(() => {
+              const itemElement = document.getElementById(`inventory-item-${itemId}`);
+              if (itemElement) {
+                itemElement.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center',
+                  inline: 'nearest'
+                });
+              }
+            }, 100);
+          }
+
+          // Clean up URL after a delay to ensure highlighting completes
+          setTimeout(() => {
+            if (window.location.search) {
+              navigate('/inventory', { replace: true });
+            }
+          }, 1500);
+
+        } catch (error: any) {
+          console.error('Error in universal search navigation:', error);
+          setError(`Failed to load inventory data: ${error.message}`);
+          setInventoryData([]);
+          // Still clean up URL even on error
+          setTimeout(() => {
+            if (window.location.search) {
+              navigate('/inventory', { replace: true });
+            }
+          }, 1000);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      processNavigation();
     }
+  }, [location.search]);
 
-    if (department && department !== activeDepartment) {
-      setActiveDepartment(department);
-    }
-
-    if (classification) {
-      const tabName = getTabFromClassification(classification);
-      if (tabName !== activeTab) {
-        setActiveTab(tabName);
-      }
-    }
-
-    // Clear URL parameters after processing to keep URL clean
-    if (itemId || department || classification) {
-      const timer = setTimeout(() => {
-        navigate('/inventory', { replace: true });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [location.search, navigate, activeDepartment, activeTab]);
-
+  // Only fetch data after initial mount and when department/classification changes
   useEffect(() => {
     fetchInventoryData();
     fetchClassifications();
   }, [fetchInventoryData, fetchClassifications]);
 
-  // Scroll to and highlight item after data loads
+  // Additional effect to refetch data when URL params change department/classification
   useEffect(() => {
-    if (highlightedItemId && inventoryData.length > 0 && !loading) {
+    const searchParams = new URLSearchParams(location.search);
+    const department = searchParams.get('department');
+    const classification = searchParams.get('classification');
+
+    // If URL has department/classification different from current state, data will be fetched
+    // by the effect above when activeTab/activeDepartment change
+    if (department || classification) {
+      // Force a refetch after URL params are processed
+      const timer = setTimeout(() => {
+        fetchInventoryData();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [location.search, fetchInventoryData]);
+
+  // Scroll to and highlight item after data loads (for regular highlighting, not universal search)
+  useEffect(() => {
+    if (highlightedItemId && inventoryData.length > 0 && !loading && !location.search) {
       const timer = setTimeout(() => {
         const itemElement = document.getElementById(`inventory-item-${highlightedItemId}`);
         if (itemElement) {
@@ -132,11 +208,11 @@ const InventoryPage: React.FC = () => {
             setHighlightedItemId(null);
           }, 5000);
         }
-      }, 500); // Small delay to ensure rendering is complete
+      }, 500);
 
       return () => clearTimeout(timer);
     }
-  }, [highlightedItemId, inventoryData, loading]);
+  }, [highlightedItemId, inventoryData, loading, location.search]);
 
   const getSingularClassification = (tab: string) => {
     switch (tab) {
@@ -467,43 +543,50 @@ const InventoryPage: React.FC = () => {
         <div className="inventory-main">
           {renderStatCards()}
 
-          <div className="page-controls">
-            <div className="search-box">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input
-                type="text"
-                placeholder="Search by name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+          {/* Filters and Search */}
+          <div className="filters-section">
+            <div className="filters-row">
+              <div className="search-box-large">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+                  <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by name, code, or brand..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="filter-group">
+                <label>Status:</label>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="low_stock">Low Stock</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                  <option value="expired">Expired</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>Items per page:</label>
+                <select value={itemsPerPage} onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
+                Add {getSingularClassification(activeTab)}
+              </button>
             </div>
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="low_stock">Low Stock</option>
-              <option value="out_of_stock">Out of Stock</option>
-              <option value="expired">Expired</option>
-            </select>
-            <select
-              className="filter-select"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value={10}>10 per page</option>
-              <option value={25}>25 per page</option>
-              <option value={50}>50 per page</option>
-              <option value={100}>100 per page</option>
-            </select>
-            <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-              Add {getSingularClassification(activeTab)}
-            </button>
           </div>
 
           {loading ? (

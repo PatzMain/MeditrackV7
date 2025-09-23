@@ -52,12 +52,6 @@ const UniversalSearch: React.FC<UniversalSearchProps> = ({
   // Debounced search function
   const debouncedSearch = useCallback((searchQuery: string) => {
     const searchFn = debounce(async (query: string) => {
-      if (!query.trim()) {
-        setResults(null);
-        setIsLoading(false);
-        return;
-      }
-
       try {
         setIsLoading(true);
         const searchResults = await universalSearchService.search(query);
@@ -159,10 +153,18 @@ const UniversalSearch: React.FC<UniversalSearchProps> = ({
   const handleInputFocus = useCallback(() => {
     setIsOpen(true);
     if (!query && !results) {
-      // Show quick actions when focused with no query
-      debouncedSearch('');
+      // Show quick actions when focused with no query - use the service directly
+      const getQuickActionsAsync = async () => {
+        try {
+          const quickActions = await universalSearchService.search('');
+          setResults(quickActions);
+        } catch (error) {
+          console.error('Error loading quick actions:', error);
+        }
+      };
+      getQuickActionsAsync();
     }
-  }, [query, results, debouncedSearch]);
+  }, [query, results]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
