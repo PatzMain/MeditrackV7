@@ -6,6 +6,8 @@ import './PagesStyles.css';
 import ViewArchiveModal from '../Modals/ViewArchiveModal';
 import RestoreArchiveModal from '../Modals/RestoreArchiveModal';
 import DeleteArchiveModal from '../Modals/DeleteArchiveModal';
+import BulkRestoreArchiveModal from '../Modals/BulkRestoreArchiveModal';
+import BulkDeleteArchiveModal from '../Modals/BulkDeleteArchiveModal';
 
 const ArchivesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,6 +25,8 @@ const ArchivesPage: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(100);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+  const [isBulkRestoreModalOpen, setIsBulkRestoreModalOpen] = useState(false);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -117,14 +121,6 @@ const ArchivesPage: React.FC = () => {
 
   const categories = ['all', 'Inventory', 'Equipment', 'Supplies', 'System'];
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
 
   const sortData = (data: any[]) => {
     return [...data].sort((a, b) => {
@@ -184,7 +180,95 @@ const ArchivesPage: React.FC = () => {
   const isAllSelected = paginatedArchives.length > 0 && paginatedArchives.every(item => selectedItems.has(item.id));
   const isSomeSelected = paginatedArchives.some(item => selectedItems.has(item.id));
 
+  // Bulk restore functionality
+  const handleBulkRestoreConfirm = async () => {
+    if (selectedItems.size === 0) return;
 
+    try {
+      setLoading(true);
+      const selectedItemsArray = Array.from(selectedItems);
+
+      // Process each selected item
+      for (const itemId of selectedItemsArray) {
+        const id = parseInt(itemId.split('_')[1]);
+
+        if (!isNaN(id)) {
+          // Update the item status to make it active again
+          await inventoryService.updateItem(id, {
+            status: 'active',
+            updated_at: new Date().toISOString()
+          });
+
+          // Find the item for logging
+          const item = archives.find(archive => archive.id === itemId);
+          if (item) {
+            // Log the activity
+            await activityService.logActivity({
+              action: 'restore',
+              description: `Restored item: ${item.title}`,
+              category: 'inventory'
+            });
+          }
+        }
+      }
+
+      // Refresh the archives list and clear selection
+      await fetchArchives();
+      setSelectedItems(new Set());
+      setIsBulkRestoreModalOpen(false);
+
+      console.log(`Successfully restored ${selectedItemsArray.length} item(s)`);
+    } catch (error) {
+      console.error('Error restoring items:', error);
+      console.error(`Failed to restore items: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Bulk delete functionality
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedItems.size === 0) return;
+
+    try {
+      setLoading(true);
+      const selectedItemsArray = Array.from(selectedItems);
+
+      // Process each selected item
+      for (const itemId of selectedItemsArray) {
+        const id = parseInt(itemId.split('_')[1]);
+
+        if (!isNaN(id)) {
+          // Find the item for logging before deletion
+          const item = archives.find(archive => archive.id === itemId);
+
+          // Delete the item
+          await inventoryService.deleteItem(id);
+
+          if (item) {
+            // Log the activity
+            await activityService.logActivity({
+              action: 'delete',
+              description: `Deleted item: ${item.title}`,
+              category: 'inventory'
+            });
+          }
+        }
+      }
+
+      // Refresh the archives list and clear selection
+      await fetchArchives();
+      setSelectedItems(new Set());
+      setIsBulkDeleteModalOpen(false);
+
+      console.log(`Successfully deleted ${selectedItemsArray.length} item(s)`);
+    } catch (error) {
+      console.error('Error deleting items:', error);
+      console.error(`Failed to delete items: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRestoreItem = async () => {
     if (!selectedItem) return;
@@ -294,10 +378,7 @@ const ArchivesPage: React.FC = () => {
             <div className="bulk-action-buttons">
               <button
                 className="btn-success btn-sm"
-                onClick={() => {
-                  // Bulk restore functionality
-                  console.log('Bulk restore:', Array.from(selectedItems));
-                }}
+                onClick={() => setIsBulkRestoreModalOpen(true)}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12Z" stroke="currentColor" strokeWidth="2"/>
@@ -307,10 +388,7 @@ const ArchivesPage: React.FC = () => {
               </button>
               <button
                 className="btn-danger btn-sm"
-                onClick={() => {
-                  // Bulk delete functionality
-                  console.log('Bulk delete:', Array.from(selectedItems));
-                }}
+                onClick={() => setIsBulkDeleteModalOpen(true)}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <polyline points="3,6 5,6 21,6" stroke="currentColor" strokeWidth="2"/>
@@ -405,131 +483,161 @@ const ArchivesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Archives Table */}
-      <div className="archives-table-container">
-        <div className="data-table">
-          <table>
-            <thead>
-              <tr>
-                <th className="checkbox-column">
+      {/* Archives Data Display */}
+      <div className="archives-data-container">
+        {/* Table Header with Bulk Selection */}
+        <div className="archives-header">
+          <div className="bulk-select-header">
+            <div className="checkbox-column">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                ref={(input) => {
+                  if (input) input.indeterminate = !isAllSelected && isSomeSelected;
+                }}
+                onChange={(e) => handleSelectAll(e.target.checked)}
+              />
+            </div>
+            <span className="header-text">Select All Items</span>
+          </div>
+
+          <div className="sort-controls">
+            <label>Sort by:</label>
+            <select
+              value={sortField}
+              onChange={(e) => {
+                setSortField(e.target.value);
+                setSortDirection('asc');
+              }}
+            >
+              <option value="title">Title</option>
+              <option value="archivedDate">Archived Date</option>
+              <option value="originalDate">Original Date</option>
+              <option value="category">Category</option>
+              <option value="status">Status</option>
+            </select>
+            <button
+              className="sort-direction-btn"
+              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+              title={`Sort ${sortDirection === 'asc' ? 'Descending' : 'Ascending'}`}
+            >
+              {sortDirection === 'asc' ? '▲' : '▼'}
+            </button>
+          </div>
+        </div>
+
+        {/* Archives Cards */}
+        <div className="archives-grid">
+          {paginatedArchives.map((archive) => (
+            <div
+              key={archive.id}
+              id={`archive-item-${archive.id}`}
+              className={`archive-card ${selectedItems.has(archive.id) ? 'selected' : ''} ${highlightedItemId === archive.id ? 'highlighted-item' : ''}`}
+            >
+              {/* Card Header */}
+              <div className="card-header">
+                <div className="card-select">
                   <input
                     type="checkbox"
-                    checked={isAllSelected}
-                    ref={(input) => {
-                      if (input) input.indeterminate = !isAllSelected && isSomeSelected;
-                    }}
-                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    checked={selectedItems.has(archive.id)}
+                    onChange={(e) => handleSelectItem(archive.id, e.target.checked)}
                   />
-                </th>
-                <th className="sortable" onClick={() => handleSort('type')}>
-                  Type {sortField === 'type' && (sortDirection === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="sortable" onClick={() => handleSort('title')}>
-                  Title & Description {sortField === 'title' && (sortDirection === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="sortable" onClick={() => handleSort('patientName')}>
-                  Patient {sortField === 'patientName' && (sortDirection === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="sortable" onClick={() => handleSort('category')}>
-                  Category {sortField === 'category' && (sortDirection === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="sortable" onClick={() => handleSort('originalDate')}>
-                  Original Date {sortField === 'originalDate' && (sortDirection === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="sortable" onClick={() => handleSort('archivedDate')}>
-                  Archived Date {sortField === 'archivedDate' && (sortDirection === 'asc' ? '▲' : '▼')}
-                </th>
-                <th>Size</th>
-                <th className="sortable" onClick={() => handleSort('status')}>
-                  Status {sortField === 'status' && (sortDirection === 'asc' ? '▲' : '▼')}
-                </th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedArchives.map((archive) => (
-                <tr
-                  key={archive.id}
-                  id={`archive-item-${archive.id}`}
-                  className={`${selectedItems.has(archive.id) ? 'selected' : ''} ${highlightedItemId === archive.id ? 'highlighted-item' : ''}`}
-                >
-                  <td className="checkbox-column">
-                    <input
-                      type="checkbox"
-                      checked={selectedItems.has(archive.id)}
-                      onChange={(e) => handleSelectItem(archive.id, e.target.checked)}
-                    />
-                  </td>
-                  <td>
-                    <div className="archive-type">
-                      <div className="type-icon">
-                        {archive.type === 'Medical Record' && '📄'}
-                        {archive.type === 'Consultation' && '🩺'}
-                        {archive.type === 'Lab Report' && '🧪'}
-                        {archive.type === 'Prescription' && '💊'}
-                        {archive.type === 'Imaging' && '🔬'}
-                        {archive.type === 'Procedure' && '⚕️'}
-                      </div>
-                      <span>{archive.type}</span>
+                </div>
+                <div className="card-type">
+                  <div className="type-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <rect width="20" height="5" x="2" y="3" rx="1" stroke="currentColor" strokeWidth="2"/>
+                      <path d="m4 8 16 0" stroke="currentColor" strokeWidth="2"/>
+                      <path d="m6 8 0 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l0-13" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <span>{archive.type}</span>
+                </div>
+                <div className="card-actions">
+                  <button
+                    className="action-btn view"
+                    title="View Archive"
+                    onClick={() => { setSelectedItem(archive); setIsViewModalOpen(true); }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="2"/>
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                  </button>
+                  <button
+                    className="action-btn restore"
+                    title="Restore"
+                    onClick={() => { setSelectedItem(archive); setIsRestoreModalOpen(true); }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12Z" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M12 7V12L15 15" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                  </button>
+                  <button
+                    className="action-btn delete"
+                    title="Permanent Delete"
+                    onClick={() => { setSelectedItem(archive); setIsDeleteModalOpen(true); }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <polyline points="3,6 5,6 21,6" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Card Content */}
+              <div className="card-content">
+                <div className="card-title">{archive.title}</div>
+                <div className="card-description">{archive.description}</div>
+
+                <div className="card-meta">
+                  <div className="meta-row">
+                    <div className="meta-item">
+                      <span className="meta-label">Category:</span>
+                      <span className={`category-badge ${(archive.category || '').toLowerCase().replace(' ', '-')}`}>
+                        {archive.category}
+                      </span>
                     </div>
-                  </td>
-                  <td>
-                    <div className="archive-details">
-                      <div className="archive-title">{archive.title}</div>
-                      <div className="archive-description">{archive.description}</div>
+                    <div className="meta-item">
+                      <span className="meta-label">Status:</span>
+                      <span className={`status-badge ${(archive.status || '').toLowerCase()}`}>
+                        {archive.status}
+                      </span>
                     </div>
-                  </td>
-                  <td>{archive.patientName}</td>
-                  <td>
-                    <span className={`category-badge ${(archive.category || '').toLowerCase().replace(' ', '-')}`}>
-                      {archive.category}
-                    </span>
-                  </td>
-                  <td>{archive.originalDate}</td>
-                  <td>{archive.archivedDate}</td>
-                  <td>{archive.size}</td>
-                  <td>
-                    <span className={`status-badge ${(archive.status || '').toLowerCase()}`}>
-                      {archive.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="table-actions">
-                      <button className="btn-icon" title="View Archive" onClick={() => { setSelectedItem(archive); setIsViewModalOpen(true); }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="2"/>
-                          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </button>
-                      <button
-                        className="btn-icon success"
-                        title="Restore"
-                        onClick={() => { setSelectedItem(archive); setIsRestoreModalOpen(true); }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <path d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12Z" stroke="currentColor" strokeWidth="2"/>
-                          <path d="M12 7V12L15 15" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </button>
-                      <button
-                        className="btn-icon danger"
-                        title="Permanent Delete"
-                        onClick={() => { setSelectedItem(archive); setIsDeleteModalOpen(true); }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <polyline points="3,6 5,6 21,6" stroke="currentColor" strokeWidth="2"/>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="10" y1="11" x2="10" y2="17" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="14" y1="11" x2="14" y2="17" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </button>
+                  </div>
+
+                  <div className="meta-row">
+                    <div className="meta-item">
+                      <span className="meta-label">Created:</span>
+                      <span className="meta-value">{archive.originalDate}</span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <div className="meta-item">
+                      <span className="meta-label">Archived:</span>
+                      <span className="meta-value">{archive.archivedDate}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+
+        {/* Empty State */}
+        {paginatedArchives.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-icon">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                <rect width="20" height="5" x="2" y="3" rx="1" stroke="currentColor" strokeWidth="2"/>
+                <path d="m4 8 16 0" stroke="currentColor" strokeWidth="2"/>
+                <path d="m6 8 0 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l0-13" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+            </div>
+            <h3>No archived items found</h3>
+            <p>There are no items matching your current search and filter criteria.</p>
+          </div>
+        )}
       </div>
 
       {/* Pagination */}
@@ -587,6 +695,22 @@ const ArchivesPage: React.FC = () => {
           item={selectedItem}
           onClose={() => setIsDeleteModalOpen(false)}
           onConfirm={handleDeleteItem}
+        />
+      )}
+
+      {isBulkRestoreModalOpen && (
+        <BulkRestoreArchiveModal
+          itemCount={selectedItems.size}
+          onClose={() => setIsBulkRestoreModalOpen(false)}
+          onConfirm={handleBulkRestoreConfirm}
+        />
+      )}
+
+      {isBulkDeleteModalOpen && (
+        <BulkDeleteArchiveModal
+          itemCount={selectedItems.size}
+          onClose={() => setIsBulkDeleteModalOpen(false)}
+          onConfirm={handleBulkDeleteConfirm}
         />
       )}
     </div>

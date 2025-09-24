@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginForm from './components/LoginForm';
 import DashboardLayout from './components/Layout/DashboardLayout';
 import DashboardPage from './components/Pages/DashboardPage';
+import PatientMonitoringPage from './components/Pages/PatientMonitoringPage';
 import InventoryPage from './components/Pages/InventoryPage';
 import ArchivesPage from './components/Pages/ArchivesPage';
 import LogsPage from './components/Pages/LogsPage';
@@ -64,6 +65,16 @@ const AppContent: React.FC = () => {
           <ProtectedRoute>
             <DashboardLayout>
               <DashboardPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patient-monitoring"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <PatientMonitoringPage />
             </DashboardLayout>
           </ProtectedRoute>
         }

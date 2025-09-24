@@ -20,7 +20,6 @@ dist/
 .idea/
 *.swp
 *.swo
-
 # OS files
 .DS_Store
 Thumbs.db
@@ -70,3 +69,4 @@ tmp/
 temp/
 .vercel
 .env*.local
+.claude

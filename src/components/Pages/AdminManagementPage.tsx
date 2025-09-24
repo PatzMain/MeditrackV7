@@ -270,68 +270,127 @@ const AdminManagementPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="data-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Department</th>
-                    <th>Position</th>
-                    <th>Employee ID</th>
-                    <th>Last Login</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.username}</td>
-                      <td>{user.first_name} {user.last_name}</td>
-                      <td>
-                        <span className={`role-badge role-${user.role}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td>{user.department || 'N/A'}</td>
-                      <td>{user.position || 'N/A'}</td>
-                      <td>{user.employee_id || 'N/A'}</td>
-                      <td>{user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</td>
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            className="btn-icon"
-                            title="Edit"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setIsEditUserModalOpen(true);
-                            }}
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                              <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
-                            </svg>
-                          </button>
-                          <button
-                            className="btn-icon danger"
-                            title="Delete"
-                            onClick={() => handleDeleteUser(user.id, user.username)}
-                            disabled={user.id === currentUser?.id}
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3,6 5,6 21,6" />
-                              <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2" />
-                              <line x1="10" y1="11" x2="10" y2="17" />
-                              <line x1="14" y1="11" x2="14" y2="17" />
-                            </svg>
-                          </button>
+            <div className="admin-data-container">
+              {/* Admin Header */}
+              <div className="admin-header">
+                <div className="header-info">
+                  <span className="users-count">{filteredUsers.length} users found</span>
+                </div>
+              </div>
+
+              {/* Users Cards Grid */}
+              <div className="users-grid">
+                {paginatedUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className={`user-card ${user.id === currentUser?.id ? 'current-user' : ''}`}
+                  >
+                    {/* Card Header */}
+                    <div className="card-header">
+                      <div className="user-avatar">
+                        <div className="avatar-circle">
+                          <span>{(user.first_name?.[0] || user.username[0] || '?').toUpperCase()}</span>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      <div className="user-info">
+                        <div className="user-name">
+                          {user.first_name} {user.last_name}
+                        </div>
+                        <div className="username">@{user.username}</div>
+                      </div>
+                      <div className="card-actions">
+                        <button
+                          className="action-btn edit"
+                          title="Edit User"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsEditUserModalOpen(true);
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
+                          </svg>
+                        </button>
+                        <button
+                          className="action-btn delete"
+                          title="Delete User"
+                          onClick={() => handleDeleteUser(user.id, user.username)}
+                          disabled={user.id === currentUser?.id}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3,6 5,6 21,6" />
+                            <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2,2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="card-content">
+                      <div className="card-meta">
+                        <div className="meta-row">
+                          <div className="meta-item">
+                            <span className="meta-label">Role:</span>
+                            <span className={`role-badge role-${user.role}`}>
+                              {user.role}
+                            </span>
+                          </div>
+                          <div className="meta-item">
+                            <span className="meta-label">Department:</span>
+                            <span className="meta-value">
+                              {user.department || <span className="placeholder-text">N/A</span>}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="meta-row">
+                          <div className="meta-item">
+                            <span className="meta-label">Position:</span>
+                            <span className="meta-value">
+                              {user.position || <span className="placeholder-text">N/A</span>}
+                            </span>
+                          </div>
+                          <div className="meta-item">
+                            <span className="meta-label">Employee ID:</span>
+                            <span className="meta-value employee-id">
+                              {user.employee_id || <span className="placeholder-text">N/A</span>}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="meta-row">
+                          <div className="meta-item full-width">
+                            <span className="meta-label">Last Login:</span>
+                            <span className="meta-value">
+                              {user.last_login
+                                ? new Date(user.last_login).toLocaleDateString()
+                                : <span className="placeholder-text never-logged">Never</span>
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Empty State */}
+              {paginatedUsers.length === 0 && (
+                <div className="empty-state">
+                  <div className="empty-icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  <h3>No users found</h3>
+                  <p>There are no users matching your current search and filter criteria.</p>
+                </div>
+              )}
 
               {/* Pagination */}
               <div className="pagination">

@@ -34,6 +34,7 @@ const ExportInventoryModal: React.FC<ExportInventoryModalProps> = ({
     'brand_name',
     'category',
     'stock_quantity',
+    'stock_threshold',
     'expiration_date',
     'status'
   ]);
@@ -80,6 +81,7 @@ const ExportInventoryModal: React.FC<ExportInventoryModalProps> = ({
     { key: 'brand_name', header: 'Brand Name', width: 25 },
     { key: 'category', header: 'Category', width: 20 },
     { key: 'stock_quantity', header: 'Stock Quantity', width: 15, formatter: (value) => value?.toString() || '0' },
+    { key: 'stock_threshold', header: 'Stock Threshold', width: 15, formatter: (value) => value?.toString() || '0' },
     { key: 'unit_of_measurement', header: 'Unit', width: 12 },
     { key: 'expiration_date', header: 'Expiration Date', width: 20 },
     { key: 'status', header: 'Status', width: 15 },

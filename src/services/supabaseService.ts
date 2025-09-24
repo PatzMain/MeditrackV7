@@ -16,6 +16,98 @@ export interface User {
   avatar_url?: string;
 }
 
+export interface Patient {
+  id: number;
+  patient_id: string;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  age?: number;
+  sex: 'Male' | 'Female';
+  civil_status: 'Single' | 'Married' | 'Divorced' | 'Widowed';
+  birthday?: string;
+  address?: string;
+  patient_type: 'Employee' | 'Dependent' | 'Student' | 'OPD';
+  course_department?: string;
+  student_level?: string;
+  year_level?: number;
+  phone?: string;
+  email?: string;
+  status: 'active' | 'inactive' | 'archived';
+  created_at: string;
+  updated_at: string;
+  created_by?: number;
+}
+
+export interface Consultation {
+  id: number;
+  case_number: string;
+  patient_id: number;
+  consultation_date: string;
+  time_in: string;
+  time_out?: string;
+  chief_complaint: string;
+  previous_consultation_date?: string;
+  previous_diagnosis?: string;
+  previous_medications?: string;
+  diagnosis?: string;
+  subjective_notes?: string;
+  objective_notes?: string;
+  assessment_notes?: string;
+  plan_notes?: string;
+  interventions?: string;
+  attending_physician?: number;
+  attending_physician_name?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: number;
+  status: 'active' | 'completed' | 'cancelled';
+  patient?: Patient;
+}
+
+export interface VitalSigns {
+  id: number;
+  consultation_id: number;
+  mode_of_arrival?: 'Ambulatory' | 'Assisted' | 'Cuddled/Carried';
+  blood_pressure_systolic?: number;
+  blood_pressure_diastolic?: number;
+  temperature?: number;
+  pulse_rate?: number;
+  respiratory_rate?: number;
+  height?: number;
+  weight?: number;
+  oxygen_saturation?: number;
+  lmp?: string;
+  has_valuables?: boolean;
+  valuables_released_to?: string;
+  valuables_items?: string;
+  patient_in_pain?: boolean;
+  pain_scale?: number;
+  patient_has_injuries?: boolean;
+  injury_abrasion?: boolean;
+  injury_contusion?: boolean;
+  injury_fracture?: boolean;
+  injury_laceration?: boolean;
+  injury_puncture?: boolean;
+  injury_sprain?: boolean;
+  injury_other?: string;
+  noi?: string;
+  poi?: string;
+  doi?: string;
+  toi?: string;
+  recorded_at: string;
+  recorded_by?: number;
+}
+
+export interface PatientStats {
+  totalPatients: number;
+  activeConsultations: number;
+  todayConsultations: number;
+  studentsCount: number;
+  employeesCount: number;
+  opdCount: number;
+}
+
 export interface LoginRequest {
   username: string;
   password: string;
@@ -204,42 +296,143 @@ export const authService = {
 
 
 
+// Helper function to calculate automatic status
+const calculateItemStatus = (item: any, classification: string): string => {
+  // For equipment, only allow manual status (active or maintenance)
+  if (classification.toLowerCase() === 'equipment') {
+    return ['active', 'maintenance'].includes(item.status?.toLowerCase())
+      ? item.status.toLowerCase()
+      : 'active';
+  }
+
+  // For medicines and supplies, calculate status automatically
+  const now = new Date();
+  const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null;
+  const stockQuantity = parseInt(item.stock_quantity) || 0;
+  const stockThreshold = parseInt(item.stock_threshold) || 0;
+
+  // Check if expired
+  if (expirationDate && expirationDate < now) {
+    return 'expired';
+  }
+
+  // Check stock levels
+  if (stockQuantity === 0) {
+    return 'out_of_stock';
+  }
+
+  if (stockQuantity < stockThreshold) {
+    return 'low_stock';
+  }
+
+  return 'active';
+};
+
 // Inventory service
 export const inventoryService = {
   getAllItems: async () => {
-    const { data, error } = await supabase
-      .from('inventory_view')
+    const { data: items, error } = await supabase
+      .from('inventory_items')
       .select('*')
       .not('status', 'eq', 'archived')
       .order('generic_name', { ascending: true });
 
     if (error) throw new Error(error.message);
-    return data || [];
+
+    // Get all classifications
+    const { data: classifications } = await supabase
+      .from('inventory_classifications')
+      .select('id, name');
+
+    const classificationMap = (classifications || []).reduce((acc: any, c: any) => {
+      acc[c.id] = c.name;
+      return acc;
+    }, {});
+
+    // Apply status calculation to each item
+    const processedData = (items || []).map(item => {
+      const classificationName = classificationMap[item.classification_id] || 'medicines';
+      const calculatedStatus = calculateItemStatus(item, classificationName);
+
+      return {
+        ...item,
+        classification: classificationName,
+        status: calculatedStatus
+      };
+    });
+
+    return processedData;
   },
 
   getItemsByDepartment: async (department: string) => {
-    const { data, error } = await supabase
-      .from('inventory_view')
+    const { data: items, error } = await supabase
+      .from('inventory_items')
       .select('*')
       .eq('department', department)
       .not('status', 'eq', 'archived')
       .order('generic_name', { ascending: true });
 
     if (error) throw new Error(error.message);
-    return data || [];
+
+    // Get all classifications
+    const { data: classifications } = await supabase
+      .from('inventory_classifications')
+      .select('id, name');
+
+    const classificationMap = (classifications || []).reduce((acc: any, c: any) => {
+      acc[c.id] = c.name;
+      return acc;
+    }, {});
+
+    // Apply status calculation to each item
+    const processedData = (items || []).map(item => {
+      const classificationName = classificationMap[item.classification_id] || 'medicines';
+      const calculatedStatus = calculateItemStatus(item, classificationName);
+
+      return {
+        ...item,
+        classification: classificationName,
+        status: calculatedStatus
+      };
+    });
+
+    return processedData;
   },
 
   getItemsByDepartmentAndClassification: async (department: string, classification: string) => {
-    const { data, error } = await supabase
-      .from('inventory_view')
+    // Get classification ID first
+    const { data: classificationData } = await supabase
+      .from('inventory_classifications')
+      .select('id')
+      .eq('name', classification)
+      .single();
+
+    if (!classificationData) {
+      return [];
+    }
+
+    const { data: items, error } = await supabase
+      .from('inventory_items')
       .select('*')
       .eq('department', department)
-      .eq('classification', classification)
+      .eq('classification_id', classificationData.id)
       .not('status', 'eq', 'archived')
       .order('generic_name', { ascending: true });
 
     if (error) throw new Error(error.message);
-    return data || [];
+
+    // Apply status calculation to each item
+    const processedData = (items || []).map(item => {
+      const calculatedStatus = calculateItemStatus(item, classification);
+
+      return {
+        ...item,
+        classification: classification,
+        status: calculatedStatus
+      };
+    });
+
+    return processedData;
   },
 
   // Legacy method for backward compatibility
@@ -256,26 +449,87 @@ export const inventoryService = {
   },
 
   createItem: async (itemData: any) => {
+    // Get classification name to determine status calculation
+    const { data: classificationData } = await supabase
+      .from('inventory_classifications')
+      .select('name')
+      .eq('id', itemData.classification_id)
+      .single();
+
+    const classificationName = classificationData?.name || 'medicines';
+
+    // Calculate status automatically
+    const calculatedStatus = calculateItemStatus(itemData, classificationName);
+
+    const finalData = {
+      ...itemData,
+      status: calculatedStatus,
+      stock_threshold: itemData.stock_threshold || 0
+    };
+
     const { data, error } = await supabase
       .from('inventory_items')
-      .insert([itemData])
+      .insert([finalData])
       .select()
       .single();
 
     if (error) throw new Error(error.message);
-    return data;
+
+    // Return item with classification name
+    return {
+      ...data,
+      classification: classificationName
+    };
   },
 
   updateItem: async (id: number, itemData: any) => {
+    // Get current item first
+    const { data: currentItem } = await supabase
+      .from('inventory_items')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!currentItem) {
+      throw new Error('Item not found');
+    }
+
+    // Get classification name separately
+    const { data: classificationData } = await supabase
+      .from('inventory_classifications')
+      .select('name')
+      .eq('id', currentItem.classification_id)
+      .single();
+
+    const classificationName = classificationData?.name || 'medicines';
+
+    // Calculate status automatically for the updated data
+    const updatedItemData = {
+      ...currentItem,
+      ...itemData
+    };
+
+    const calculatedStatus = calculateItemStatus(updatedItemData, classificationName);
+
+    const finalData = {
+      ...itemData,
+      status: calculatedStatus
+    };
+
     const { data, error } = await supabase
       .from('inventory_items')
-      .update(itemData)
+      .update(finalData)
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw new Error(error.message);
-    return data;
+
+    // Return item with classification name
+    return {
+      ...data,
+      classification: classificationName
+    };
   },
 
   deleteItem: async (id: number) => {
@@ -300,14 +554,31 @@ export const inventoryService = {
   },
 
   getArchivedItems: async () => {
-    const { data, error } = await supabase
-      .from('inventory_view')
+    const { data: items, error } = await supabase
+      .from('inventory_items')
       .select('*')
       .eq('status', 'archived')
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
-    return data || [];
+
+    // Get all classifications
+    const { data: classifications } = await supabase
+      .from('inventory_classifications')
+      .select('id, name');
+
+    const classificationMap = (classifications || []).reduce((acc: any, c: any) => {
+      acc[c.id] = c.name;
+      return acc;
+    }, {});
+
+    // Add classification field for archived items
+    const processedData = (items || []).map(item => ({
+      ...item,
+      classification: classificationMap[item.classification_id]
+    }));
+
+    return processedData;
   },
 
   getInventoryStatus: async () => {
@@ -420,6 +691,225 @@ export const activityService = {
     if (error) throw new Error(error.message);
     return data;
   },
+};
+
+// Patient monitoring service for managing patient records and consultations
+export const patientMonitoringService = {
+  // Patient management
+  getPatients: async (): Promise<Patient[]> => {
+    const { data, error } = await supabase
+      .from('patients')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  getPatientById: async (id: number): Promise<Patient | null> => {
+    const { data, error } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  createPatient: async (patientData: Omit<Patient, 'id' | 'patient_id' | 'created_at' | 'updated_at'>): Promise<Patient> => {
+    const currentUser = authService.getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('patients')
+      .insert([{
+        ...patientData,
+        created_by: currentUser?.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  updatePatient: async (id: number, patientData: Partial<Patient>): Promise<Patient> => {
+    const { data, error } = await supabase
+      .from('patients')
+      .update({
+        ...patientData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  // Consultation management
+  getConsultations: async (includePatient: boolean = true): Promise<Consultation[]> => {
+    if (includePatient) {
+      const { data, error } = await supabase
+        .from('consultations')
+        .select('*, patients(*)')
+        .order('consultation_date', { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return (data as any)?.map((consultation: any) => ({
+        ...consultation,
+        patient: consultation.patients
+      })) || [];
+    } else {
+      const { data, error } = await supabase
+        .from('consultations')
+        .select('*')
+        .order('consultation_date', { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return data as Consultation[] || [];
+    }
+  },
+
+  getConsultationById: async (id: number): Promise<Consultation | null> => {
+    const { data, error } = await supabase
+      .from('consultations')
+      .select('*, patients(*)')
+      .eq('id', id)
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data ? {
+      ...(data as any),
+      patient: (data as any).patients
+    } : null;
+  },
+
+  getConsultationsByPatientId: async (patientId: number): Promise<Consultation[]> => {
+    const { data, error } = await supabase
+      .from('consultations')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('consultation_date', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  createConsultation: async (consultationData: Omit<Consultation, 'id' | 'case_number' | 'created_at' | 'updated_at' | 'patient'>): Promise<Consultation> => {
+    const currentUser = authService.getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('consultations')
+      .insert([{
+        ...consultationData,
+        created_by: currentUser?.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select('*, patients(*)')
+      .single();
+
+    if (error) throw new Error(error.message);
+    return {
+      ...(data as any),
+      patient: (data as any).patients
+    };
+  },
+
+  updateConsultation: async (id: number, consultationData: Partial<Consultation>): Promise<Consultation> => {
+    const { data, error } = await supabase
+      .from('consultations')
+      .update({
+        ...consultationData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select('*, patients(*)')
+      .single();
+
+    if (error) throw new Error(error.message);
+    return {
+      ...(data as any),
+      patient: (data as any).patients
+    };
+  },
+
+  // Vital signs management
+  getVitalSignsByConsultationId: async (consultationId: number): Promise<VitalSigns | null> => {
+    const { data, error } = await supabase
+      .from('vital_signs')
+      .select('*')
+      .eq('consultation_id', consultationId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return data || null;
+  },
+
+  createVitalSigns: async (vitalSignsData: Omit<VitalSigns, 'id' | 'recorded_at'>): Promise<VitalSigns> => {
+    const currentUser = authService.getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('vital_signs')
+      .insert([{
+        ...vitalSignsData,
+        recorded_by: currentUser?.id,
+        recorded_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  updateVitalSigns: async (id: number, vitalSignsData: Partial<VitalSigns>): Promise<VitalSigns> => {
+    const { data, error } = await supabase
+      .from('vital_signs')
+      .update(vitalSignsData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  // Statistics and analytics
+  getPatientStats: async (): Promise<PatientStats> => {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get all patients
+    const { data: patients, error: patientsError } = await supabase
+      .from('patients')
+      .select('id, patient_type, status');
+
+    if (patientsError) throw new Error(patientsError.message);
+
+    // Get consultations
+    const { data: consultations, error: consultationsError } = await supabase
+      .from('consultations')
+      .select('id, consultation_date, status');
+
+    if (consultationsError) throw new Error(consultationsError.message);
+
+    const activePatients = patients?.filter(p => p.status === 'active') || [];
+    const activeConsultations = consultations?.filter(c => c.status === 'active') || [];
+    const todayConsultations = consultations?.filter(c => c.consultation_date === today) || [];
+
+    return {
+      totalPatients: activePatients.length,
+      activeConsultations: activeConsultations.length,
+      todayConsultations: todayConsultations.length,
+      studentsCount: activePatients.filter(p => p.patient_type === 'Student').length,
+      employeesCount: activePatients.filter(p => p.patient_type === 'Employee').length,
+      opdCount: activePatients.filter(p => p.patient_type === 'OPD').length
+    };
+  }
 };
 
 // Archives service for managing archived records

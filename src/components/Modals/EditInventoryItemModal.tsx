@@ -30,21 +30,15 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
     const classificationType = getClassificationType();
 
     if (classificationType === 'equipment') {
-      // Equipment: exclude 'expired' option
+      // Equipment: only Active and Maintenance (manual status)
       return [
         { value: 'active', label: 'Active' },
-        { value: 'low_stock', label: 'Low Stock' },
-        { value: 'out_of_stock', label: 'Out of Stock' },
         { value: 'maintenance', label: 'Maintenance' }
       ];
     } else {
-      // Other classifications (medicines, supplies): exclude 'maintenance' option
-      return [
-        { value: 'active', label: 'Active' },
-        { value: 'low_stock', label: 'Low Stock' },
-        { value: 'out_of_stock', label: 'Out of Stock' },
-        { value: 'expired', label: 'Expired' }
-      ];
+      // Medicines and Supplies: status will be calculated automatically by backend
+      // No status selection needed as it's determined by stock quantity, threshold, and expiration
+      return [];
     }
   };
 
@@ -96,28 +90,44 @@ const EditInventoryItemModal: React.FC<EditInventoryItemModalProps> = ({ item, o
               <label htmlFor="unit_of_measurement">Unit of Measurement</label>
               <input type="text" id="unit_of_measurement" name="unit_of_measurement" value={formData.unit_of_measurement || ''} onChange={handleChange} />
             </div>
+            {/* Only show expiration date for medicines and supplies, not equipment */}
+            {getClassificationType() !== 'equipment' && (
+              <div className="form-group">
+                <label htmlFor="expiration_date">Expiration Date</label>
+                <input type="date" id="expiration_date" name="expiration_date" value={formData.expiration_date || ''} onChange={handleChange} />
+              </div>
+            )}
             <div className="form-group">
-              <label htmlFor="expiration_date">Expiration Date</label>
-              <input type="date" id="expiration_date" name="expiration_date" value={formData.expiration_date || ''} onChange={handleChange} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="maximum_stock_level">Maximum Stock Level</label>
-              <input type="number" id="maximum_stock_level" name="maximum_stock_level" value={formData.maximum_stock_level || 0} onChange={handleChange} />
+              <label htmlFor="stock_threshold">Stock Threshold</label>
+              <input type="number" id="stock_threshold" name="stock_threshold" value={formData.stock_threshold || 0} onChange={handleChange} />
+              <small>Low stock alert will trigger when stock falls below this number</small>
             </div>
             <div className="form-group">
               <label htmlFor="notes">Notes</label>
               <textarea id="notes" name="notes" value={formData.notes || ''} onChange={handleChange}></textarea>
             </div>
-            <div className="form-group">
-              <label htmlFor="status">Status</label>
-              <select id="status" name="status" value={formData.status || 'active'} onChange={handleChange}>
-                {getStatusOptions().map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Only show status field for equipment */}
+            {getClassificationType() === 'equipment' && (
+              <div className="form-group">
+                <label htmlFor="status">Status</label>
+                <select id="status" name="status" value={formData.status || 'active'} onChange={handleChange}>
+                  {getStatusOptions().map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {/* For medicines and supplies, add informational text */}
+            {getClassificationType() !== 'equipment' && (
+              <div className="form-group">
+                <label>Status</label>
+                <p style={{ margin: 0, padding: '8px', backgroundColor: '#f3f4f6', borderRadius: '4px', fontSize: '14px' }}>
+                  Status will be automatically determined based on stock quantity, expiration date, and stock threshold.
+                </p>
+              </div>
+            )}
           </div>
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>

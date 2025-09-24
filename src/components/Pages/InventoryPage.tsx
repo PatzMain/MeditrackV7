@@ -224,14 +224,6 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortDirection('asc');
-    }
-  };
 
   const sortedAndFilteredItems = useMemo(() => {
     let items = inventoryData.filter(item => {
@@ -410,104 +402,171 @@ const InventoryPage: React.FC = () => {
     );
   };
 
-  const renderDataTable = () => (
-    <div className="data-table">
-      <table>
-        <thead>
-          <tr>
-            <th onClick={() => handleSort('code')}>Code {sortColumn === 'code' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-            <th onClick={() => handleSort('generic_name')}>Generic Name {sortColumn === 'generic_name' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-            <th onClick={() => handleSort('brand_name')}>Brand Name {sortColumn === 'brand_name' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-            <th onClick={() => handleSort('category')}>Category {sortColumn === 'category' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-            <th onClick={() => handleSort('stock_quantity')}>Stock {sortColumn === 'stock_quantity' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-            <th onClick={() => handleSort('expiration_date')}>Expiration Date {sortColumn === 'expiration_date' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-            <th onClick={() => handleSort('status')}>Status {sortColumn === 'status' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedItems.map((item) => (
-            <tr
-              key={item.id}
-              id={`inventory-item-${item.id}`}
-              className={highlightedItemId === item.id ? 'highlighted-item' : ''}
-            >
-              <td>{item.code || <span className="placeholder-text">--</span>}</td>
-              <td>{item.generic_name || <span className="placeholder-text">No name</span>}</td>
-              <td>{item.brand_name || <span className="placeholder-text">No brand</span>}</td>
-              <td>{item.category || <span className="placeholder-text">Uncategorized</span>}</td>
-              <td>
-                {item.stock_quantity || 0} {item.unit_of_measurement || <span className="placeholder-text">units</span>}
-              </td>
-              <td>{item.expiration_date || <span className="placeholder-text">No expiry</span>}</td>
-              <td>
-                <span className={getStatusBadgeClass(item.status)}>
-                  {item.status ? item.status.replace(/_/g, ' ') : 'Unknown'}
-                </span>
-              </td>
-              <td>
-                <div className="table-actions">
-                  <button className="btn-icon" title="View" onClick={() => { setSelectedItem(item); setIsViewModalOpen(true); }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  </button>
-                  <button className="btn-icon" title="Edit" onClick={() => { setSelectedItem(item); setIsEditModalOpen(true); }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
-                    </svg>
-                  </button>
-                  <button className="btn-icon danger" title="Archive" onClick={() => { setSelectedItem(item); setIsArchiveModalOpen(true); }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect width="20" height="5" x="2" y="3" rx="1" />
-                      <path d="m4 8 16 0" />
-                      <path d="m6 8 0 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l0-13" />
-                      <path d="m8 8 0-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2l0 2" />
-                    </svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+  const renderPagination = () => (
+    <div className="pagination">
+      <button
+        className="pagination-btn"
+        disabled={currentPage === 1}
+        onClick={() => setCurrentPage(currentPage - 1)}
+      >
+        Previous
+      </button>
 
-      {/* Pagination */}
-      <div className="pagination">
-        <button
-          className="pagination-btn"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage(currentPage - 1)}
-        >
-          Previous
-        </button>
-
-        <div className="pagination-pages">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-            <button
-              key={page}
-              className={`pagination-page ${page === currentPage ? 'active' : ''}`}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </button>
-          ))}
-        </div>
-
-        <div className="pagination-info">
-          Showing {startIndex + 1}-{Math.min(endIndex, sortedAndFilteredItems.length)} of {sortedAndFilteredItems.length} items
-        </div>
-
-        <button
-          className="pagination-btn"
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage(currentPage + 1)}
-        >
-          Next
-        </button>
+      <div className="pagination-pages">
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+          <button
+            key={page}
+            className={`pagination-page ${page === currentPage ? 'active' : ''}`}
+            onClick={() => setCurrentPage(page)}
+          >
+            {page}
+          </button>
+        ))}
       </div>
+
+      <div className="pagination-info">
+        Showing {startIndex + 1}-{Math.min(endIndex, sortedAndFilteredItems.length)} of {sortedAndFilteredItems.length} items
+      </div>
+
+      <button
+        className="pagination-btn"
+        disabled={currentPage === totalPages}
+        onClick={() => setCurrentPage(currentPage + 1)}
+      >
+        Next
+      </button>
+    </div>
+  );
+
+  const renderDataTable = () => (
+    <div className="inventory-data-container">
+      <div className="inventory-header">
+        <div className="header-info">
+          <span className="items-count">
+            {sortedAndFilteredItems.length} {sortedAndFilteredItems.length === 1 ? 'item' : 'items'}
+          </span>
+        </div>
+        <div className="sort-controls">
+          <label>Sort by:</label>
+          <select
+            value={sortColumn || 'generic_name'}
+            onChange={(e) => {
+              const newColumn = e.target.value;
+              setSortColumn(newColumn);
+              setSortDirection('asc');
+            }}
+          >
+            <option value="generic_name">Name</option>
+            <option value="code">Code</option>
+            <option value="brand_name">Brand</option>
+            <option value="category">Category</option>
+            <option value="stock_quantity">Stock</option>
+            <option value="expiration_date">Expiry Date</option>
+            <option value="status">Status</option>
+          </select>
+          <button
+            className="sort-direction-btn"
+            onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+            title={`Sort ${sortDirection === 'asc' ? 'Descending' : 'Ascending'}`}
+          >
+            {sortDirection === 'asc' ? '↑' : '↓'}
+          </button>
+        </div>
+      </div>
+
+      <div className="inventory-grid">
+        {paginatedItems.map((item) => (
+          <div
+            key={item.id}
+            id={`inventory-item-${item.id}`}
+            className={`inventory-card ${highlightedItemId === item.id ? 'highlighted-item' : ''}`}
+            onClick={() => { setSelectedItem(item); setIsViewModalOpen(true); }}
+          >
+            <div className="card-header">
+              <div className="card-type">
+                <div className="type-icon">
+                  {getClassificationFromTab(activeTab) === 'Medicines' ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4.5 16.5c-1.5 1.5-1.5 3.5 0 5s3.5 1.5 5 0l4-4a3 3 0 0 0-3-3l-6 2Z"/>
+                      <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2Z"/>
+                    </svg>
+                  ) : getClassificationFromTab(activeTab) === 'Equipment' ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 7h-9"/>
+                      <path d="M14 17H5"/>
+                      <circle cx="17" cy="17" r="3"/>
+                      <circle cx="7" cy="7" r="3"/>
+                    </svg>
+                  )}
+                </div>
+                <span>{getClassificationFromTab(activeTab)}</span>
+              </div>
+              <div className="card-actions">
+                <button className="action-btn view" title="View" onClick={(e) => { e.stopPropagation(); setSelectedItem(item); setIsViewModalOpen(true); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+                <button className="action-btn edit" title="Edit" onClick={(e) => { e.stopPropagation(); setSelectedItem(item); setIsEditModalOpen(true); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
+                  </svg>
+                </button>
+                <button className="action-btn delete" title="Archive" onClick={(e) => { e.stopPropagation(); setSelectedItem(item); setIsArchiveModalOpen(true); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect width="20" height="5" x="2" y="3" rx="1" />
+                    <path d="m4 8 16 0" />
+                    <path d="m6 8 0 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l0-13" />
+                    <path d="m8 8 0-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2l0 2" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="card-content">
+              <div className="card-title">{item.generic_name || 'No name'}</div>
+              <div className="card-subtitle">{item.brand_name || 'No brand'}</div>
+              <div className="card-code">Code: {item.code || '--'}</div>
+
+              <div className="card-meta">
+                <div className="meta-row">
+                  <div className="meta-item">
+                    <span className="meta-label">Category</span>
+                    <span className="meta-value">{item.category || 'Uncategorized'}</span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="meta-label">Status</span>
+                    <span className={`meta-value ${getStatusBadgeClass(item.status)}`}>
+                      {item.status ? item.status.replace(/_/g, ' ') : 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="meta-row">
+                  <div className="meta-item">
+                    <span className="meta-label">Stock</span>
+                    <span className="meta-value stock-info">
+                      {item.stock_quantity || 0} {item.unit_of_measurement || 'units'}
+                    </span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="meta-label">Expiry</span>
+                    <span className="meta-value">{item.expiration_date || 'No expiry'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {renderPagination()}
     </div>
   );
 
@@ -518,8 +577,8 @@ const InventoryPage: React.FC = () => {
         <p className="page-subtitle">Manage medical and dental inventory across different classifications.</p>
       </div>
 
-      <div className="inventory-layout">
-        <div className="inventory-sidebar">
+      <div className="inventory-content">
+        <div className="tabs-container">
           <div className="department-tabs">
             <button
               className={`department-tab ${activeDepartment === 'medical' ? 'active' : ''}`}
@@ -534,6 +593,7 @@ const InventoryPage: React.FC = () => {
               Dental Department
             </button>
           </div>
+
           <div className="classification-tabs">
             <button
               className={`classification-tab ${activeTab === 'medicines' ? 'active' : ''}`}
