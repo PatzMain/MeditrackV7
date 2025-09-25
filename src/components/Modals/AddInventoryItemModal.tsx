@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Modal.css';
+import './InventoryModals.css';
 
 interface AddInventoryItemModalProps {
   onClose: () => void;

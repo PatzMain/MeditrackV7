@@ -183,14 +183,18 @@ const LogsPage: React.FC = () => {
 
   const getCategoryColor = (category: string) => {
     const colorMap: { [key: string]: string } = {
-      'authentication': 'blue',
+      'Authentication': 'blue',
+      'User Management': 'indigo',
       'Patient Management': 'green',
       'Medical Records': 'purple',
       'Inventory Management': 'orange',
-      'System': 'gray',
+      'System Administration': 'gray',
       'Security': 'red',
+      'Data Export': 'lime',
+      'Settings': 'amber',
+      'Audit': 'pink',
       'Laboratory': 'teal',
-      'User Management': 'indigo'
+      'Monitoring': 'violet'
     };
     return colorMap[category] || 'gray';
   };

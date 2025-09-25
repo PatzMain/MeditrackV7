@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { userService, activityService } from '../../services/supabaseService';
-import './ModalStyles.css';
+import './Modal.css';
+import './UserModals.css';
 
 interface AddUserModalProps {
   isOpen: boolean;

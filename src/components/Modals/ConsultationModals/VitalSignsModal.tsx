@@ -6,7 +6,8 @@ import {
   type VitalSigns,
   type Consultation
 } from '../../../services/supabaseService';
-import '../PatientModals/PatientModals.css';
+import '../Modal.css';
+import '../ConsultationModals.css';
 
 interface VitalSignsModalProps {
   isOpen: boolean;

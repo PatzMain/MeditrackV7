@@ -1,5 +1,6 @@
 import React from 'react';
 import './Modal.css';
+import './InventoryModals.css';
 
 interface ViewInventoryItemModalProps {
   item: any;

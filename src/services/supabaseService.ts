@@ -823,6 +823,58 @@ export const patientMonitoringService = {
     return data;
   },
 
+  archivePatient: async (id: number): Promise<Patient> => {
+    const { data, error } = await supabase
+      .from('patients')
+      .update({
+        status: 'archived',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  unarchivePatient: async (id: number): Promise<Patient> => {
+    const { data, error } = await supabase
+      .from('patients')
+      .update({
+        status: 'active',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  getArchivedPatients: async (): Promise<Patient[]> => {
+    const { data, error } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('status', 'archived')
+      .order('updated_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  getActivePatients: async (): Promise<Patient[]> => {
+    const { data, error } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
   // Consultation management
   getConsultations: async (includePatient: boolean = true): Promise<Consultation[]> => {
     if (includePatient) {

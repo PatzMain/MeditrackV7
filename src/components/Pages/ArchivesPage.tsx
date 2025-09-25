@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { inventoryService, activityService } from '../../services/supabaseService';
+import { inventoryService, patientMonitoringService, activityService } from '../../services/supabaseService';
 import './ArchivesPage.css';
 import './PagesStyles.css';
 import ViewArchiveModal from '../Modals/ViewArchiveModal';
@@ -33,10 +33,13 @@ const ArchivesPage: React.FC = () => {
   const fetchArchives = async () => {
     try {
       setLoading(true);
-      const inventoryItems = await inventoryService.getArchivedItems();
+      const [inventoryItems, archivedPatients] = await Promise.all([
+        inventoryService.getArchivedItems(),
+        patientMonitoringService.getArchivedPatients()
+      ]);
 
-      // Transform data to unified archive format - only inventory items
-      const archiveData = inventoryItems.map(item => ({
+      // Transform inventory items to unified archive format
+      const inventoryArchiveData = inventoryItems.map(item => ({
         id: `inv_${item.id}`,
         type: 'Inventory Item',
         title: item.generic_name,
@@ -47,10 +50,29 @@ const ArchivesPage: React.FC = () => {
         category: 'Inventory',
         status: 'Archived',
         patientName: 'N/A',
-        createdBy: 'System'
+        createdBy: 'System',
+        originalData: item
       }));
 
-      setArchives(archiveData);
+      // Transform archived patients to unified archive format
+      const patientArchiveData = archivedPatients.map(patient => ({
+        id: `patient_${patient.id}`,
+        type: 'Patient Record',
+        title: `${patient.first_name} ${patient.last_name}`,
+        description: `${patient.patient_type} - ID: ${patient.patient_id}`,
+        archivedDate: new Date(patient.updated_at).toISOString().split('T')[0],
+        originalDate: new Date(patient.created_at).toISOString().split('T')[0],
+        size: 'N/A',
+        category: 'Patient',
+        status: 'Archived',
+        patientName: `${patient.first_name} ${patient.last_name}`,
+        createdBy: 'System',
+        originalData: patient
+      }));
+
+      // Combine both types of archived data
+      const allArchiveData = [...inventoryArchiveData, ...patientArchiveData];
+      setArchives(allArchiveData);
       setError(null);
     } catch (error) {
       console.error('Error fetching archives:', error);
@@ -119,7 +141,7 @@ const ArchivesPage: React.FC = () => {
     }
   }, [highlightedItemId, archives, loading]);
 
-  const categories = ['all', 'Inventory', 'Equipment', 'Supplies', 'System'];
+  const categories = ['all', 'Inventory', 'Patient', 'Equipment', 'Supplies', 'System'];
 
 
   const sortData = (data: any[]) => {
@@ -190,24 +212,40 @@ const ArchivesPage: React.FC = () => {
 
       // Process each selected item
       for (const itemId of selectedItemsArray) {
-        const id = parseInt(itemId.split('_')[1]);
+        const [type, idStr] = itemId.split('_');
+        const id = parseInt(idStr);
 
         if (!isNaN(id)) {
-          // Update the item status to make it active again
-          await inventoryService.updateItem(id, {
-            status: 'active',
-            updated_at: new Date().toISOString()
-          });
-
           // Find the item for logging
           const item = archives.find(archive => archive.id === itemId);
-          if (item) {
-            // Log the activity
-            await activityService.logActivity({
-              action: 'restore',
-              description: `Restored item: ${item.title}`,
-              category: 'inventory'
+
+          if (type === 'inv') {
+            // Update the inventory item status to make it active again
+            await inventoryService.updateItem(id, {
+              status: 'active',
+              updated_at: new Date().toISOString()
             });
+
+            if (item) {
+              // Log the activity
+              await activityService.logActivity({
+                action: 'restore',
+                description: `Restored inventory item: ${item.title}`,
+                category: 'inventory'
+              });
+            }
+          } else if (type === 'patient') {
+            // Restore patient
+            await patientMonitoringService.unarchivePatient(id);
+
+            if (item) {
+              // Log the activity
+              await activityService.logActivity({
+                action: 'restore',
+                description: `Restored patient record: ${item.title}`,
+                category: 'patient_management'
+              });
+            }
           }
         }
       }
@@ -236,22 +274,36 @@ const ArchivesPage: React.FC = () => {
 
       // Process each selected item
       for (const itemId of selectedItemsArray) {
-        const id = parseInt(itemId.split('_')[1]);
+        const [type, idStr] = itemId.split('_');
+        const id = parseInt(idStr);
 
         if (!isNaN(id)) {
           // Find the item for logging before deletion
           const item = archives.find(archive => archive.id === itemId);
 
-          // Delete the item
-          await inventoryService.deleteItem(id);
+          if (type === 'inv') {
+            // Delete inventory item
+            await inventoryService.deleteItem(id);
 
-          if (item) {
-            // Log the activity
-            await activityService.logActivity({
-              action: 'delete',
-              description: `Deleted item: ${item.title}`,
-              category: 'inventory'
-            });
+            if (item) {
+              // Log the activity
+              await activityService.logActivity({
+                action: 'delete',
+                description: `Permanently deleted inventory item: ${item.title}`,
+                category: 'inventory'
+              });
+            }
+          } else if (type === 'patient') {
+            // Skip patient deletion for data integrity
+            console.warn(`Skipping permanent deletion of patient record: ${item?.title} (data integrity)`);
+
+            if (item) {
+              await activityService.logActivity({
+                action: 'delete_attempt',
+                description: `Attempted bulk deletion of patient record: ${item.title} (action blocked for data integrity)`,
+                category: 'patient_management'
+              });
+            }
           }
         }
       }
@@ -274,24 +326,37 @@ const ArchivesPage: React.FC = () => {
     if (!selectedItem) return;
     try {
       setLoading(true);
-      const id = parseInt(selectedItem.id.split('_')[1]);
+      const [type, idStr] = selectedItem.id.split('_');
+      const id = parseInt(idStr);
 
       if (isNaN(id)) {
         throw new Error('Invalid item ID');
       }
 
-      // Update the item status to make it active again
-      await inventoryService.updateItem(id, {
-        status: 'active',
-        updated_at: new Date().toISOString()
-      });
+      if (type === 'inv') {
+        // Restore inventory item
+        await inventoryService.updateItem(id, {
+          status: 'active',
+          updated_at: new Date().toISOString()
+        });
 
-      // Log the activity
-      await activityService.logActivity({
-        action: 'restore',
-        description: `Restored item: ${selectedItem.title}`,
-        category: 'inventory'
-      });
+        // Log the activity
+        await activityService.logActivity({
+          action: 'restore',
+          description: `Restored inventory item: ${selectedItem.title}`,
+          category: 'inventory'
+        });
+      } else if (type === 'patient') {
+        // Restore patient
+        await patientMonitoringService.unarchivePatient(id);
+
+        // Log the activity
+        await activityService.logActivity({
+          action: 'restore',
+          description: `Restored patient record: ${selectedItem.title}`,
+          category: 'patient_management'
+        });
+      }
 
       // Refresh the archives list
       await fetchArchives();
@@ -312,13 +377,52 @@ const ArchivesPage: React.FC = () => {
   const handleDeleteItem = async () => {
     if (!selectedItem) return;
     try {
-      const id = selectedItem.id.split('_')[1];
-      await inventoryService.deleteItem(id);
-      activityService.logActivity({ action: 'delete', description: `Deleted item: ${selectedItem.title}` });
-      fetchArchives();
+      setLoading(true);
+      const [type, idStr] = selectedItem.id.split('_');
+      const id = parseInt(idStr);
+
+      if (isNaN(id)) {
+        throw new Error('Invalid item ID');
+      }
+
+      if (type === 'inv') {
+        // Delete inventory item
+        await inventoryService.deleteItem(id);
+
+        // Log the activity
+        await activityService.logActivity({
+          action: 'delete',
+          description: `Permanently deleted inventory item: ${selectedItem.title}`,
+          category: 'inventory'
+        });
+      } else if (type === 'patient') {
+        // For patients, we might want to consider if we should really permanently delete
+        // or just keep them archived. For now, let's just log that this action was attempted
+        // but not actually delete the patient record for data integrity
+        console.warn('Permanent deletion of patient records is not recommended for data integrity');
+
+        // Instead of deleting, we could add a "permanently_deleted" status or similar
+        // For now, just log the attempt
+        await activityService.logActivity({
+          action: 'delete_attempt',
+          description: `Attempted permanent deletion of patient record: ${selectedItem.title} (action blocked for data integrity)`,
+          category: 'patient_management'
+        });
+
+        throw new Error('Permanent deletion of patient records is not allowed for data integrity purposes');
+      }
+
+      // Refresh the archives list
+      await fetchArchives();
       setIsDeleteModalOpen(false);
+      setSelectedItem(null);
+
+      console.log('Item deleted successfully!');
     } catch (error) {
       console.error('Error deleting item:', error);
+      setError(`Failed to delete item: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -444,6 +548,20 @@ const ArchivesPage: React.FC = () => {
             <div className="stat-value">{archives.filter(item => item.type === 'Inventory Item').length}</div>
             <div className="stat-title">Inventory Items</div>
             <div className="stat-change positive">Archived inventory</div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{archives.filter(item => item.type === 'Patient Record').length}</div>
+            <div className="stat-title">Patient Records</div>
+            <div className="stat-change positive">Archived patients</div>
           </div>
         </div>
 

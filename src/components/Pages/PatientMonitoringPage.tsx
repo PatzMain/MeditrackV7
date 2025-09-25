@@ -9,6 +9,7 @@ import {
 } from '../../services/supabaseService';
 import AddPatientModal from '../Modals/PatientModals/AddPatientModal';
 import ViewPatientModal from '../Modals/PatientModals/ViewPatientModal';
+import ArchivePatientModal from '../Modals/PatientModals/ArchivePatientModal';
 import StartConsultationModal from '../Modals/ConsultationModals/StartConsultationModal';
 import ConsultationModal from '../Modals/ConsultationModals/ConsultationModal';
 import VitalSignsModal from '../Modals/ConsultationModals/VitalSignsModal';
@@ -30,6 +31,7 @@ const PatientMonitoringPage: React.FC = () => {
   // Modal state management
   const [isAddPatientModalOpen, setIsAddPatientModalOpen] = useState(false);
   const [isViewPatientModalOpen, setIsViewPatientModalOpen] = useState(false);
+  const [isArchivePatientModalOpen, setIsArchivePatientModalOpen] = useState(false);
   const [isStartConsultationModalOpen, setIsStartConsultationModalOpen] = useState(false);
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [isVitalSignsModalOpen, setIsVitalSignsModalOpen] = useState(false);
@@ -42,7 +44,7 @@ const PatientMonitoringPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await patientMonitoringService.getPatients();
+      const data = await patientMonitoringService.getActivePatients();
       setPatients(data);
     } catch (error: any) {
       console.error('Error fetching patients:', error);
@@ -134,6 +136,23 @@ const PatientMonitoringPage: React.FC = () => {
 
   const handleCloseViewPatientModal = () => {
     setIsViewPatientModalOpen(false);
+    setSelectedPatient(null);
+  };
+
+  const handleArchivePatient = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setIsArchivePatientModalOpen(true);
+  };
+
+  const handlePatientArchived = (patient: Patient) => {
+    // Refresh the patients list to remove the archived patient
+    fetchPatients();
+    setIsArchivePatientModalOpen(false);
+    setSelectedPatient(null);
+  };
+
+  const handleCloseArchivePatientModal = () => {
+    setIsArchivePatientModalOpen(false);
     setSelectedPatient(null);
   };
 
@@ -386,6 +405,18 @@ const PatientMonitoringPage: React.FC = () => {
             onClick={() => handleNewConsultation(patient)}
           >
             New Consultation
+          </button>
+          <button
+            className="btn-warning"
+            onClick={() => handleArchivePatient(patient)}
+            title="Archive Patient"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect width="20" height="5" x="2" y="3" rx="1"/>
+              <path d="m4 8 16 0"/>
+              <path d="m6 8 0 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l0-13"/>
+            </svg>
+            Archive
           </button>
         </div>
       </div>
@@ -738,6 +769,13 @@ const PatientMonitoringPage: React.FC = () => {
         onClose={handleCloseViewPatientModal}
         onEdit={handleEditPatient}
         onNewConsultation={handleNewConsultation}
+      />
+
+      <ArchivePatientModal
+        isOpen={isArchivePatientModalOpen}
+        patient={selectedPatient}
+        onClose={handleCloseArchivePatientModal}
+        onPatientArchived={handlePatientArchived}
       />
 
       <StartConsultationModal

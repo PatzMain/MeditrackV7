@@ -51,7 +51,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         onLogout={logout}
       />
       <div className="main-content" onClick={(e) => e.stopPropagation()}>
-        <TopBar />
+        <TopBar onToggleSidebar={toggleSidebar} isMobile={isMobile} />
         <div className="content-wrapper">{children}</div>
       </div>
     </div>

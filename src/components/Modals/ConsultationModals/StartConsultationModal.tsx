@@ -5,7 +5,8 @@ import {
   type Patient,
   type Consultation
 } from '../../../services/supabaseService';
-import '../PatientModals/PatientModals.css';
+import '../Modal.css';
+import '../ConsultationModals.css';
 
 interface StartConsultationModalProps {
   isOpen: boolean;

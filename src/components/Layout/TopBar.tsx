@@ -3,7 +3,12 @@ import UniversalSearch from '../Common/UniversalSearch';
 import { useAuth } from '../../contexts/AuthContext';
 import './TopBar.css';
 
-const TopBar: React.FC = () => {
+interface TopBarProps {
+  onToggleSidebar?: () => void;
+  isMobile?: boolean;
+}
+
+const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isMobile = false }) => {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -19,6 +24,19 @@ const TopBar: React.FC = () => {
     <header className="topbar">
       {/* Logo and Brand Name */}
       <div className="topbar-left">
+        {isMobile && onToggleSidebar && (
+          <button
+            className="mobile-menu-btn"
+            onClick={onToggleSidebar}
+            aria-label="Toggle menu"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        )}
         <div className="topbar-brand">
           <h1 className="brand-name">MEDITRACK</h1>
           <span className="brand-tagline">Medical Management System</span>
