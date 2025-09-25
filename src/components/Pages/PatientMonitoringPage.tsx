@@ -8,6 +8,12 @@ import {
   type Consultation,
   type PatientStats
 } from '../../services/supabaseService';
+import AddPatientModal from '../Modals/PatientModals/AddPatientModal';
+import ViewPatientModal from '../Modals/PatientModals/ViewPatientModal';
+import StartConsultationModal from '../Modals/ConsultationModals/StartConsultationModal';
+import ConsultationModal from '../Modals/ConsultationModals/ConsultationModal';
+import VitalSignsModal from '../Modals/ConsultationModals/VitalSignsModal';
+import GlasgowComaScaleModal from '../Modals/ConsultationModals/GlasgowComaScaleModal';
 
 const PatientMonitoringPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -20,6 +26,16 @@ const PatientMonitoringPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(12);
+
+  // Modal state management
+  const [isAddPatientModalOpen, setIsAddPatientModalOpen] = useState(false);
+  const [isViewPatientModalOpen, setIsViewPatientModalOpen] = useState(false);
+  const [isStartConsultationModalOpen, setIsStartConsultationModalOpen] = useState(false);
+  const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
+  const [isVitalSignsModalOpen, setIsVitalSignsModalOpen] = useState(false);
+  const [isGlasgowComaScaleModalOpen, setIsGlasgowComaScaleModalOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
 
   const fetchPatients = useCallback(async () => {
     try {
@@ -86,37 +102,112 @@ const PatientMonitoringPage: React.FC = () => {
 
   const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
 
-  const handleAddPatient = async () => {
-    // This will be implemented with a modal later
-    console.log('Add patient functionality to be implemented');
+  const handleAddPatient = () => {
+    setIsAddPatientModalOpen(true);
   };
 
-  const handleViewPatient = async (patient: Patient) => {
-    try {
-      await activityService.logActivity({
-        action: 'view_patient',
-        description: `Viewed patient: ${patient.first_name} ${patient.last_name}`,
-        details: { patient_id: patient.id }
-      });
-      // Navigation or modal logic will be implemented
-      console.log('View patient:', patient);
-    } catch (error) {
-      console.error('Error logging activity:', error);
-    }
+  const handleViewPatient = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setIsViewPatientModalOpen(true);
   };
 
-  const handleNewConsultation = async (patient: Patient) => {
-    try {
-      await activityService.logActivity({
-        action: 'start_consultation',
-        description: `Started new consultation for: ${patient.first_name} ${patient.last_name}`,
-        details: { patient_id: patient.id }
-      });
-      // Navigation or modal logic will be implemented
-      console.log('New consultation for:', patient);
-    } catch (error) {
-      console.error('Error logging activity:', error);
-    }
+  const handleEditPatient = (patient: Patient) => {
+    // This will be implemented when EditPatientModal is created
+    console.log('Edit patient:', patient);
+  };
+
+  const handleNewConsultation = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setIsStartConsultationModalOpen(true);
+  };
+
+  const handlePatientSaved = (patient: Patient) => {
+    // Refresh the patients list
+    fetchPatients();
+    setIsAddPatientModalOpen(false);
+  };
+
+  const handleCloseAddPatientModal = () => {
+    setIsAddPatientModalOpen(false);
+  };
+
+  const handleCloseViewPatientModal = () => {
+    setIsViewPatientModalOpen(false);
+    setSelectedPatient(null);
+  };
+
+  // Consultation Modal Handlers
+  const handleConsultationStarted = (consultation: Consultation) => {
+    fetchConsultations(); // Refresh consultations list
+    setIsStartConsultationModalOpen(false);
+    setSelectedPatient(null);
+    // Optionally open the consultation modal directly
+    setSelectedConsultation(consultation);
+    setIsConsultationModalOpen(true);
+  };
+
+  const handleCloseStartConsultationModal = () => {
+    setIsStartConsultationModalOpen(false);
+    setSelectedPatient(null);
+  };
+
+  const handleContinueConsultation = (consultation: Consultation) => {
+    setSelectedConsultation(consultation);
+    setIsConsultationModalOpen(true);
+  };
+
+  const handleViewConsultationDetails = (consultation: Consultation) => {
+    setSelectedConsultation(consultation);
+    setIsConsultationModalOpen(true);
+  };
+
+  const handleConsultationUpdated = (consultation: Consultation) => {
+    fetchConsultations(); // Refresh consultations list
+  };
+
+  const handleConsultationCompleted = (consultation: Consultation) => {
+    fetchConsultations(); // Refresh consultations list
+    setIsConsultationModalOpen(false);
+    setSelectedConsultation(null);
+  };
+
+  const handleCloseConsultationModal = () => {
+    setIsConsultationModalOpen(false);
+    setSelectedConsultation(null);
+  };
+
+  // Vital Signs Modal Handlers
+  const handleOpenVitalSignsModal = (consultation: Consultation) => {
+    setSelectedConsultation(consultation);
+    setIsVitalSignsModalOpen(true);
+  };
+
+  const handleVitalSignsRecorded = () => {
+    fetchConsultations(); // Refresh consultations list to update vital_signs_recorded flag
+    setIsVitalSignsModalOpen(false);
+    setSelectedConsultation(null);
+  };
+
+  const handleCloseVitalSignsModal = () => {
+    setIsVitalSignsModalOpen(false);
+    setSelectedConsultation(null);
+  };
+
+  // Glasgow Coma Scale Modal Handlers
+  const handleOpenGlasgowComaScaleModal = (consultation: Consultation) => {
+    setSelectedConsultation(consultation);
+    setIsGlasgowComaScaleModalOpen(true);
+  };
+
+  const handleGlasgowComaScaleRecorded = () => {
+    fetchConsultations(); // Refresh consultations list to update glasgow_coma_recorded flag
+    setIsGlasgowComaScaleModalOpen(false);
+    setSelectedConsultation(null);
+  };
+
+  const handleCloseGlasgowComaScaleModal = () => {
+    setIsGlasgowComaScaleModalOpen(false);
+    setSelectedConsultation(null);
   };
 
   const renderStatsCards = () => {
@@ -561,8 +652,39 @@ const PatientMonitoringPage: React.FC = () => {
                     </div>
                   )}
                   <div className="card-actions">
-                    <button className="btn-primary">Continue</button>
-                    <button className="btn-secondary">View Details</button>
+                    <button
+                      className="btn-primary"
+                      onClick={() => handleContinueConsultation(consultation)}
+                    >
+                      Continue
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => handleViewConsultationDetails(consultation)}
+                    >
+                      View Details
+                    </button>
+                    <button
+                      className="btn-info"
+                      onClick={() => handleOpenVitalSignsModal(consultation)}
+                      disabled={consultation.status !== 'active'}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                      </svg>
+                      Vital Signs
+                    </button>
+                    <button
+                      className="btn-warning"
+                      onClick={() => handleOpenGlasgowComaScaleModal(consultation)}
+                      disabled={consultation.status !== 'active'}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                      </svg>
+                      Glasgow
+                    </button>
                   </div>
                 </div>
               </div>
@@ -582,6 +704,50 @@ const PatientMonitoringPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modals */}
+      <AddPatientModal
+        isOpen={isAddPatientModalOpen}
+        onClose={handleCloseAddPatientModal}
+        onSave={handlePatientSaved}
+      />
+
+      <ViewPatientModal
+        isOpen={isViewPatientModalOpen}
+        patient={selectedPatient}
+        onClose={handleCloseViewPatientModal}
+        onEdit={handleEditPatient}
+        onNewConsultation={handleNewConsultation}
+      />
+
+      <StartConsultationModal
+        isOpen={isStartConsultationModalOpen}
+        patient={selectedPatient}
+        onClose={handleCloseStartConsultationModal}
+        onConsultationStarted={handleConsultationStarted}
+      />
+
+      <ConsultationModal
+        isOpen={isConsultationModalOpen}
+        consultation={selectedConsultation}
+        onClose={handleCloseConsultationModal}
+        onConsultationUpdated={handleConsultationUpdated}
+        onConsultationCompleted={handleConsultationCompleted}
+      />
+
+      <VitalSignsModal
+        isOpen={isVitalSignsModalOpen}
+        consultation={selectedConsultation}
+        onClose={handleCloseVitalSignsModal}
+        onVitalSignsRecorded={handleVitalSignsRecorded}
+      />
+
+      <GlasgowComaScaleModal
+        isOpen={isGlasgowComaScaleModalOpen}
+        consultation={selectedConsultation}
+        onClose={handleCloseGlasgowComaScaleModal}
+        onGlasgowComaScaleRecorded={handleGlasgowComaScaleRecorded}
+      />
     </div>
   );
 };

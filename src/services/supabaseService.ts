@@ -23,8 +23,8 @@ export interface Patient {
   last_name: string;
   middle_name?: string;
   age?: number;
-  sex: 'Male' | 'Female';
-  civil_status: 'Single' | 'Married' | 'Divorced' | 'Widowed';
+  sex?: 'Male' | 'Female';
+  civil_status?: 'Single' | 'Married' | 'Divorced' | 'Widowed';
   birthday?: string;
   address?: string;
   patient_type: 'Employee' | 'Dependent' | 'Student' | 'OPD';
@@ -97,6 +97,79 @@ export interface VitalSigns {
   toi?: string;
   recorded_at: string;
   recorded_by?: number;
+}
+
+export interface PatientContact {
+  id: number;
+  patient_id: number;
+  contact_name: string;
+  relationship: string;
+  contact_number: string;
+  is_primary: boolean;
+  created_at: string;
+}
+
+export interface MedicalHistory {
+  id: number;
+  patient_id: number;
+  // Allergies
+  food_allergies?: string;
+  drug_allergies?: string;
+  other_allergies?: string;
+  // Family History
+  family_ptb: boolean;
+  family_cancer: boolean;
+  family_dm: boolean;
+  family_cardiovascular: boolean;
+  family_others?: string;
+  // Medical History
+  seizure: boolean;
+  asthma: boolean;
+  ptb: boolean;
+  surgery: boolean;
+  cardio: boolean;
+  neuro: boolean;
+  ob_gyne: boolean;
+  other_conditions?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GlasgowComaScale {
+  id: number;
+  consultation_id: number;
+  eye_response: number; // 1-4
+  eye_response_description?: string;
+  verbal_response: number; // 1-5
+  verbal_response_description?: string;
+  motor_response: number; // 1-6
+  motor_response_description?: string;
+  total_score: number; // Auto-calculated: 3-15
+  assessed_at: string;
+  assessed_by?: number;
+}
+
+export interface ConsultationAttachment {
+  id: number;
+  consultation_id: number;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size?: number;
+  description?: string;
+  uploaded_at: string;
+  uploaded_by?: number;
+}
+
+export interface PatientMonitoringLog {
+  id: number;
+  patient_id?: number;
+  consultation_id?: number;
+  action: string;
+  description?: string;
+  details?: any; // JSONB
+  performed_at: string;
+  performed_by?: number;
 }
 
 export interface PatientStats {
@@ -839,11 +912,24 @@ export const patientMonitoringService = {
   },
 
   // Vital signs management
-  getVitalSignsByConsultationId: async (consultationId: number): Promise<VitalSigns | null> => {
+  getVitalSignsByConsultationId: async (consultationId: number): Promise<VitalSigns[]> => {
     const { data, error } = await supabase
       .from('vital_signs')
       .select('*')
       .eq('consultation_id', consultationId)
+      .order('recorded_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  getLatestVitalSignsByConsultationId: async (consultationId: number): Promise<VitalSigns | null> => {
+    const { data, error } = await supabase
+      .from('vital_signs')
+      .select('*')
+      .eq('consultation_id', consultationId)
+      .order('recorded_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (error && error.code !== 'PGRST116') throw new Error(error.message);
@@ -872,6 +958,243 @@ export const patientMonitoringService = {
       .from('vital_signs')
       .update(vitalSignsData)
       .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  // Patient contacts management
+  getPatientContacts: async (patientId: number): Promise<PatientContact[]> => {
+    const { data, error } = await supabase
+      .from('patient_contacts')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('is_primary', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  createPatientContact: async (contactData: Omit<PatientContact, 'id' | 'created_at'>): Promise<PatientContact> => {
+    const { data, error } = await supabase
+      .from('patient_contacts')
+      .insert([{
+        ...contactData,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  updatePatientContact: async (id: number, contactData: Partial<PatientContact>): Promise<PatientContact> => {
+    const { data, error } = await supabase
+      .from('patient_contacts')
+      .update(contactData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  deletePatientContact: async (id: number): Promise<void> => {
+    const { error } = await supabase
+      .from('patient_contacts')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+  },
+
+  // Medical history management
+  getMedicalHistory: async (patientId: number): Promise<MedicalHistory | null> => {
+    const { data, error } = await supabase
+      .from('medical_history')
+      .select('*')
+      .eq('patient_id', patientId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return data || null;
+  },
+
+  createMedicalHistory: async (historyData: Omit<MedicalHistory, 'id' | 'created_at' | 'updated_at'>): Promise<MedicalHistory> => {
+    const { data, error } = await supabase
+      .from('medical_history')
+      .insert([{
+        ...historyData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  updateMedicalHistory: async (id: number, historyData: Partial<MedicalHistory>): Promise<MedicalHistory> => {
+    const { data, error } = await supabase
+      .from('medical_history')
+      .update({
+        ...historyData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  // Glasgow Coma Scale management
+  getGlasgowComaScale: async (consultationId: number): Promise<GlasgowComaScale | null> => {
+    const { data, error } = await supabase
+      .from('glasgow_coma_scales')
+      .select('*')
+      .eq('consultation_id', consultationId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return data || null;
+  },
+
+  getGlasgowComaScalesByConsultationId: async (consultationId: number): Promise<GlasgowComaScale[]> => {
+    const { data, error } = await supabase
+      .from('glasgow_coma_scales')
+      .select('*')
+      .eq('consultation_id', consultationId)
+      .order('assessed_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  createGlasgowComaScale: async (gcsData: Omit<GlasgowComaScale, 'id' | 'total_score' | 'assessed_at'>): Promise<GlasgowComaScale> => {
+    const currentUser = authService.getCurrentUser();
+    const totalScore = gcsData.eye_response + gcsData.verbal_response + gcsData.motor_response;
+
+    const { data, error } = await supabase
+      .from('glasgow_coma_scales')
+      .insert([{
+        ...gcsData,
+        total_score: totalScore,
+        assessed_by: currentUser?.id,
+        assessed_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  updateGlasgowComaScale: async (id: number, gcsData: Partial<GlasgowComaScale>): Promise<GlasgowComaScale> => {
+    // Recalculate total score if response values are updated
+    const updateData = { ...gcsData };
+    if (gcsData.eye_response || gcsData.verbal_response || gcsData.motor_response) {
+      // Get current data to calculate total
+      const { data: current } = await supabase
+        .from('glasgow_coma_scales')
+        .select('eye_response, verbal_response, motor_response')
+        .eq('id', id)
+        .single();
+
+      if (current) {
+        const eyeResponse = gcsData.eye_response ?? current.eye_response;
+        const verbalResponse = gcsData.verbal_response ?? current.verbal_response;
+        const motorResponse = gcsData.motor_response ?? current.motor_response;
+        updateData.total_score = eyeResponse + verbalResponse + motorResponse;
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('glasgow_coma_scales')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  // Consultation attachments management
+  getConsultationAttachments: async (consultationId: number): Promise<ConsultationAttachment[]> => {
+    const { data, error } = await supabase
+      .from('consultation_attachments')
+      .select('*')
+      .eq('consultation_id', consultationId)
+      .order('uploaded_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  createConsultationAttachment: async (attachmentData: Omit<ConsultationAttachment, 'id' | 'uploaded_at'>): Promise<ConsultationAttachment> => {
+    const currentUser = authService.getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('consultation_attachments')
+      .insert([{
+        ...attachmentData,
+        uploaded_by: currentUser?.id,
+        uploaded_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  deleteConsultationAttachment: async (id: number): Promise<void> => {
+    const { error } = await supabase
+      .from('consultation_attachments')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+  },
+
+  // Patient monitoring logs management
+  getPatientMonitoringLogs: async (patientId?: number, consultationId?: number, limit: number = 100): Promise<PatientMonitoringLog[]> => {
+    let query = supabase
+      .from('patient_monitoring_logs')
+      .select('*')
+      .order('performed_at', { ascending: false })
+      .limit(limit);
+
+    if (patientId) {
+      query = query.eq('patient_id', patientId);
+    }
+    if (consultationId) {
+      query = query.eq('consultation_id', consultationId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  createPatientMonitoringLog: async (logData: Omit<PatientMonitoringLog, 'id' | 'performed_at'>): Promise<PatientMonitoringLog> => {
+    const currentUser = authService.getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('patient_monitoring_logs')
+      .insert([{
+        ...logData,
+        performed_by: currentUser?.id,
+        performed_at: new Date().toISOString()
+      }])
       .select()
       .single();
 
