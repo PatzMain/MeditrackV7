@@ -12,7 +12,6 @@ yarn-error.log*
 .env.production.local
 
 # Build outputs
-build/
 dist/
 
 # IDE files
@@ -67,6 +66,5 @@ dist
 # Temporary folders
 tmp/
 temp/
-.vercel
 .env*.local
 .claude
