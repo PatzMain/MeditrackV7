@@ -131,12 +131,39 @@
   box-shadow: 0 2px 8px rgba(30, 60, 114, 0.2);
 }
 
-/* Clean, simplified styles for the updated layout */
+/* Mobile Menu Button */
+.mobile-menu-btn {
+  display: none;
+  background: rgba(30, 60, 114, 0.1);
+  border: 1px solid rgba(30, 60, 114, 0.2);
+  border-radius: 8px;
+  padding: 8px;
+  color: #1e3c72;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.mobile-menu-btn:hover {
+  background: rgba(30, 60, 114, 0.15);
+  border-color: rgba(30, 60, 114, 0.3);
+  transform: scale(1.05);
+}
+
+.mobile-menu-btn:active {
+  transform: scale(0.95);
+  background: rgba(30, 60, 114, 0.2);
+}
 
 /* Responsive design */
 @media (max-width: 1024px) {
   .topbar {
     gap: 16px;
+    padding: 0 20px;
   }
 
   .topbar-left {
@@ -150,16 +177,32 @@
   .topbar-center {
     max-width: 500px;
   }
+
+  .topbar-right {
+    min-width: 280px;
+  }
 }
 
 @media (max-width: 768px) {
   .topbar {
-    padding: 0 16px;
-    gap: 12px;
+    padding: 0 12px;
+    gap: 8px;
+    height: 60px;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
   }
 
   .topbar-left {
     min-width: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .topbar-brand {
+    display: flex;
   }
 
   .brand-name {
@@ -170,12 +213,20 @@
     font-size: 0.7rem;
   }
 
+  .topbar-center {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+  }
+
   .topbar-right {
     min-width: auto;
+    gap: 12px;
   }
 
   .date-display {
     padding: 6px 8px;
+    border-radius: 6px;
   }
 
   .date-text {
@@ -193,17 +244,33 @@
   .user-role-badge {
     padding: 4px 8px;
     font-size: 0.7rem;
+    border-radius: 12px;
+    white-space: nowrap;
+  }
+
+  /* Better touch targets */
+  .mobile-menu-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
   }
 }
 
 @media (max-width: 480px) {
   .topbar {
-    padding: 0 12px;
+    padding: 0 8px;
+    gap: 6px;
+    height: 56px;
+  }
+
+  .topbar-left {
     gap: 8px;
   }
 
   .brand-name {
     font-size: 1.125rem;
+    white-space: nowrap;
   }
 
   .brand-tagline {
@@ -211,11 +278,132 @@
   }
 
   .topbar-right {
-    min-width: auto;
+    gap: 8px;
+  }
+
+  .date-display {
+    padding: 4px 6px;
+  }
+
+  .date-text {
+    font-size: 0.65rem;
+  }
+
+  .time-text {
+    font-size: 0.6rem;
   }
 
   .user-role-badge {
     padding: 3px 6px;
     font-size: 0.65rem;
+  }
+
+  .mobile-menu-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 6px;
+  }
+}
+
+@media (max-width: 360px) {
+  .topbar {
+    padding: 0 6px;
+    gap: 4px;
+  }
+
+  .brand-name {
+    font-size: 1rem;
+  }
+
+  .topbar-right {
+    gap: 6px;
+  }
+
+  .date-display {
+    display: none;
+  }
+
+  .user-role-badge {
+    padding: 2px 4px;
+    font-size: 0.6rem;
+  }
+
+  .mobile-menu-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+/* Landscape orientation optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+  .topbar {
+    height: 50px;
+    padding: 0 16px;
+  }
+
+  .mobile-menu-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .brand-name {
+    font-size: 1.125rem;
+  }
+
+  .user-role-badge {
+    padding: 3px 6px;
+    font-size: 0.65rem;
+  }
+}
+
+/* Touch-specific optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-menu-btn:hover {
+    background: rgba(30, 60, 114, 0.1);
+    transform: none;
+  }
+
+  .mobile-menu-btn:active {
+    background: rgba(30, 60, 114, 0.2);
+    transform: scale(0.95);
+  }
+
+  /* Better touch feedback */
+  .topbar-right > * {
+    transition: transform 0.1s ease;
+  }
+
+  .topbar-right > *:active {
+    transform: scale(0.95);
+  }
+}
+
+/* Safe area support for modern mobile devices */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .topbar {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+    }
+  }
+
+  @media (max-width: 480px) {
+    .topbar {
+      padding-left: max(8px, env(safe-area-inset-left));
+      padding-right: max(8px, env(safe-area-inset-right));
+    }
+  }
+
+  @media (max-width: 360px) {
+    .topbar {
+      padding-left: max(6px, env(safe-area-inset-left));
+      padding-right: max(6px, env(safe-area-inset-right));
+    }
   }
 }

@@ -501,29 +501,65 @@
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 16px;
   }
+
+  .overview-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .tabs-container,
+  .tab-content {
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+
+  .patients-grid,
+  .consultations-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+  }
+
+  .tab-btn {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+  }
+
+  .quick-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
   .tabs-container,
   .tab-content {
-    padding: 16px;
-    margin-bottom: 16px;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
   }
 
   .tab-navigation {
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
+    padding: 2px;
   }
 
   .tab-btn {
     justify-content: flex-start;
-    padding: 12px 16px;
+    padding: 14px 16px;
+    font-size: 0.875rem;
+    border-radius: 6px;
   }
 
   .patients-grid,
   .consultations-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .patient-card,
+  .consultation-card {
+    border-radius: 8px;
   }
 
   .patient-card .card-header,
@@ -538,19 +574,35 @@
 
   .patient-card .info-row {
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
   }
 
   .patient-card .info-item {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .patient-card .info-item:last-child {
+    border-bottom: none;
   }
 
   .patient-card .card-actions,
   .consultation-card .card-actions {
     flex-direction: column;
     gap: 8px;
+    margin-top: 16px;
+  }
+
+  .patient-card .card-actions button,
+  .consultation-card .card-actions button {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
   }
 
   .overview-grid {
@@ -560,11 +612,147 @@
 
   .overview-card {
     padding: 16px;
+    border-radius: 8px;
   }
 
   .quick-stats {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .quick-stat {
+    padding: 20px 16px;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .quick-stat .stat-number {
+    font-size: 1.75rem;
+    margin-bottom: 8px;
+  }
+
+  .quick-stat .stat-label {
+    font-size: 0.8rem;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  .pagination-pages {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .pagination-page {
+    width: 36px;
+    height: 36px;
+    font-size: 0.875rem;
+  }
+
+  .coming-soon {
+    padding: 40px 20px;
+    border-radius: 8px;
+  }
+
+  .coming-soon h3 {
+    font-size: 1.25rem;
+  }
+
+  .coming-soon p {
+    font-size: 0.875rem;
+  }
+
+  /* Enhanced mobile touch targets */
+  .patient-card,
+  .consultation-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .patient-card:hover,
+  .consultation-card:hover {
+    transform: none; /* Remove hover transform on mobile */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Status badges mobile optimization */
+  .status-badge {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabs-container,
+  .tab-content {
+    padding: 8px;
+    border-radius: 6px;
+  }
+
+  .tab-btn {
+    padding: 12px 14px;
+    font-size: 0.8rem;
+  }
+
+  .patient-card .patient-name {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .patient-card .patient-id {
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+  }
+
+  .patient-card .info-label {
+    font-size: 0.7rem;
+  }
+
+  .patient-card .info-value {
+    font-size: 0.8rem;
+  }
+
+  .patient-card .card-actions button,
+  .consultation-card .card-actions button {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    min-height: 44px; /* Minimum touch target size */
+  }
+
+  .consultation-card .consultation-case,
+  .consultation-card .consultation-patient {
+    font-size: 0.8rem;
+  }
+
+  .consultation-card .consultation-complaint,
+  .consultation-card .consultation-diagnosis {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .activity-item {
+    padding: 12px 8px;
+    border-radius: 6px;
+  }
+
+  .activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+  }
+
+  .activity-title {
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+
+  .activity-time {
+    font-size: 0.7rem;
   }
 
   .quick-stat {
@@ -575,47 +763,86 @@
     font-size: 1.5rem;
   }
 
-  .pagination {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
-  }
-
-  .pagination-pages {
-    justify-content: center;
+  .quick-stat .stat-label {
+    font-size: 0.75rem;
   }
 
   .coming-soon {
-    padding: 60px 24px;
+    padding: 32px 16px;
+    margin: 20px 0;
+  }
+
+  .coming-soon svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
   }
 
   .coming-soon h3 {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
+    margin-bottom: 8px;
   }
 
   .coming-soon p {
-    font-size: 0.875rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  /* Pagination mobile optimization */
+  .pagination-btn {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+  }
+
+  .pagination-page {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+
+  .pagination-info {
+    font-size: 0.8rem;
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 360px) {
   .tabs-container,
   .tab-content {
+    padding: 6px;
+  }
+
+  .patient-card .card-header,
+  .consultation-card .card-header {
+    padding: 8px 12px;
+  }
+
+  .patient-card .card-content,
+  .consultation-card .card-content {
     padding: 12px;
   }
 
   .patient-card .patient-name {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .patient-card .card-actions button,
   .consultation-card .card-actions button {
     padding: 8px 12px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    min-height: 40px;
   }
 
-  .activity-item {
-    padding: 8px;
+  .overview-card {
+    padding: 12px;
+  }
+
+  .quick-stat {
+    padding: 12px 8px;
+  }
+
+  .quick-stat .stat-number {
+    font-size: 1.25rem;
   }
 
   .activity-icon {
@@ -623,21 +850,41 @@
     height: 28px;
   }
 
-  .activity-title {
-    font-size: 0.8rem;
-  }
-
-  .activity-time {
-    font-size: 0.7rem;
-  }
-
   .coming-soon {
-    padding: 40px 16px;
+    padding: 24px 12px;
+  }
+}
+
+/* Touch-specific optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .patient-card:hover,
+  .consultation-card:hover,
+  .overview-card:hover,
+  .quick-stat:hover {
+    transform: none;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
 
-  .coming-soon svg {
-    width: 48px;
-    height: 48px;
+  .tab-btn:hover {
+    background: transparent;
+  }
+
+  .tab-btn.active {
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+  }
+
+  /* Increase touch targets */
+  .pagination-btn,
+  .pagination-page {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Better button touch feedback */
+  .patient-card .card-actions button:active,
+  .consultation-card .card-actions button:active {
+    background-color: #1e3c72;
+    transform: scale(0.98);
   }
 }
 
