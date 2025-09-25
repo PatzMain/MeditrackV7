@@ -3,7 +3,6 @@ import {
   patientMonitoringService,
   activityService,
   type Consultation,
-  type Patient,
   type VitalSigns,
   type GlasgowComaScale
 } from '../../../services/supabaseService';

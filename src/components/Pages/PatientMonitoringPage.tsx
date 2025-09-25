@@ -3,7 +3,6 @@ import './PatientMonitoringPage.css';
 import './PagesStyles.css';
 import {
   patientMonitoringService,
-  activityService,
   type Patient,
   type Consultation,
   type PatientStats
@@ -14,6 +13,7 @@ import StartConsultationModal from '../Modals/ConsultationModals/StartConsultati
 import ConsultationModal from '../Modals/ConsultationModals/ConsultationModal';
 import VitalSignsModal from '../Modals/ConsultationModals/VitalSignsModal';
 import GlasgowComaScaleModal from '../Modals/ConsultationModals/GlasgowComaScaleModal';
+import ConsultationAttachmentsModal from '../Modals/ConsultationModals/ConsultationAttachmentsModal';
 
 const PatientMonitoringPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -34,6 +34,7 @@ const PatientMonitoringPage: React.FC = () => {
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [isVitalSignsModalOpen, setIsVitalSignsModalOpen] = useState(false);
   const [isGlasgowComaScaleModalOpen, setIsGlasgowComaScaleModalOpen] = useState(false);
+  const [isAttachmentsModalOpen, setIsAttachmentsModalOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
 
@@ -207,6 +208,16 @@ const PatientMonitoringPage: React.FC = () => {
 
   const handleCloseGlasgowComaScaleModal = () => {
     setIsGlasgowComaScaleModalOpen(false);
+    setSelectedConsultation(null);
+  };
+
+  const handleOpenAttachmentsModal = (consultation: Consultation) => {
+    setSelectedConsultation(consultation);
+    setIsAttachmentsModalOpen(true);
+  };
+
+  const handleCloseAttachmentsModal = () => {
+    setIsAttachmentsModalOpen(false);
     setSelectedConsultation(null);
   };
 
@@ -685,6 +696,15 @@ const PatientMonitoringPage: React.FC = () => {
                       </svg>
                       Glasgow
                     </button>
+                    <button
+                      className="btn-info"
+                      onClick={() => handleOpenAttachmentsModal(consultation)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.64 16.2a2 2 0 0 1-2.83-2.83l8.49-8.49"/>
+                      </svg>
+                      Files
+                    </button>
                   </div>
                 </div>
               </div>
@@ -747,6 +767,12 @@ const PatientMonitoringPage: React.FC = () => {
         consultation={selectedConsultation}
         onClose={handleCloseGlasgowComaScaleModal}
         onGlasgowComaScaleRecorded={handleGlasgowComaScaleRecorded}
+      />
+
+      <ConsultationAttachmentsModal
+        isOpen={isAttachmentsModalOpen}
+        consultation={selectedConsultation}
+        onClose={handleCloseAttachmentsModal}
       />
     </div>
   );

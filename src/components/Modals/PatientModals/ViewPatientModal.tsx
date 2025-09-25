@@ -7,6 +7,9 @@ import {
   type MedicalHistory,
   type Consultation
 } from '../../../services/supabaseService';
+import PatientContactModal from './PatientContactModal';
+import MedicalHistoryModal from './MedicalHistoryModal';
+import PatientMonitoringLogsModal from './PatientMonitoringLogsModal';
 import './PatientModals.css';
 
 interface ViewPatientModalProps {
@@ -29,6 +32,12 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
   const [medicalHistory, setMedicalHistory] = useState<MedicalHistory | null>(null);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [activeTab, setActiveTab] = useState('profile');
+
+  // Modal states
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<PatientContact | null>(null);
+  const [medicalHistoryModalOpen, setMedicalHistoryModalOpen] = useState(false);
+  const [logsModalOpen, setLogsModalOpen] = useState(false);
 
   const fetchPatientDetails = useCallback(async () => {
     if (!patient) return;
@@ -113,6 +122,62 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
     }
   };
 
+  // Modal handlers
+  const handleAddContact = () => {
+    setSelectedContact(null);
+    setContactModalOpen(true);
+  };
+
+  const handleEditContact = (contact: PatientContact) => {
+    setSelectedContact(contact);
+    setContactModalOpen(true);
+  };
+
+  const handleContactSaved = (contact: PatientContact) => {
+    if (selectedContact) {
+      // Update existing contact
+      setContacts(prev => prev.map(c => c.id === contact.id ? contact : c));
+    } else {
+      // Add new contact
+      setContacts(prev => [contact, ...prev]);
+    }
+  };
+
+  const handleDeleteContact = async (contact: PatientContact) => {
+    if (!window.confirm(`Are you sure you want to delete the contact for ${contact.contact_name}?`)) {
+      return;
+    }
+
+    try {
+      await patientMonitoringService.deletePatientContact(contact.id);
+      setContacts(prev => prev.filter(c => c.id !== contact.id));
+
+      await activityService.logActivity({
+        action: 'delete_patient_contact',
+        description: `Deleted emergency contact ${contact.contact_name} for patient ${patient?.first_name} ${patient?.last_name}`,
+        details: {
+          patient_id: patient?.id,
+          contact_name: contact.contact_name,
+          relationship: contact.relationship
+        }
+      });
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+    }
+  };
+
+  const handleEditMedicalHistory = () => {
+    setMedicalHistoryModalOpen(true);
+  };
+
+  const handleMedicalHistorySaved = (history: MedicalHistory) => {
+    setMedicalHistory(history);
+  };
+
+  const handleViewLogs = () => {
+    setLogsModalOpen(true);
+  };
+
   if (!isOpen || !patient) return null;
 
   return (
@@ -177,6 +242,16 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
               <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
             </svg>
             Consultations ({consultations.length})
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`}
+            onClick={() => setActiveTab('logs')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            Activity Logs
           </button>
         </div>
 
@@ -294,11 +369,21 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
                 <div className="contacts-section">
                   <div className="section-header">
                     <h3>Emergency Contacts</h3>
+                    <button className="btn-primary" onClick={handleAddContact}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                      Add Contact
+                    </button>
                   </div>
 
                   {contacts.length === 0 ? (
                     <div className="empty-state">
                       <p>No emergency contacts registered for this patient.</p>
+                      <button className="btn-primary" onClick={handleAddContact}>
+                        Add First Contact
+                      </button>
                     </div>
                   ) : (
                     <div className="contacts-grid">
@@ -306,9 +391,11 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
                         <div key={contact.id} className="contact-card">
                           <div className="contact-header">
                             <h4>Contact {index + 1}</h4>
-                            {contact.is_primary && (
-                              <span className="primary-badge">Primary</span>
-                            )}
+                            <div className="contact-badges">
+                              {contact.is_primary && (
+                                <span className="primary-badge">Primary</span>
+                              )}
+                            </div>
                           </div>
                           <div className="contact-details">
                             <div className="contact-item">
@@ -324,6 +411,30 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
                               <span className="contact-value">{contact.contact_number}</span>
                             </div>
                           </div>
+                          <div className="contact-actions">
+                            <button
+                              className="btn-secondary btn-sm"
+                              onClick={() => handleEditContact(contact)}
+                              title="Edit contact"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>
+                              </svg>
+                              Edit
+                            </button>
+                            <button
+                              className="btn-danger btn-sm"
+                              onClick={() => handleDeleteContact(contact)}
+                              title="Delete contact"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3,6 5,6 21,6"/>
+                                <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1 2-2h4a2,2 0 0,1 2,2v2"/>
+                              </svg>
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -334,9 +445,23 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
               {/* Medical History Tab */}
               {activeTab === 'medical' && (
                 <div className="medical-history-section">
+                  <div className="section-header">
+                    <h3>Medical History</h3>
+                    <button className="btn-primary" onClick={handleEditMedicalHistory}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>
+                      </svg>
+                      {medicalHistory ? 'Edit History' : 'Add History'}
+                    </button>
+                  </div>
+
                   {!medicalHistory ? (
                     <div className="empty-state">
                       <p>No medical history recorded for this patient.</p>
+                      <button className="btn-primary" onClick={handleEditMedicalHistory}>
+                        Add Medical History
+                      </button>
                     </div>
                   ) : (
                     <div className="medical-history-grid">
@@ -515,6 +640,61 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
                   )}
                 </div>
               )}
+
+              {/* Activity Logs Tab */}
+              {activeTab === 'logs' && (
+                <div className="logs-section">
+                  <div className="section-header">
+                    <h3>Activity Logs</h3>
+                    <button className="btn-secondary" onClick={handleViewLogs}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                      </svg>
+                      View Detailed Logs
+                    </button>
+                  </div>
+
+                  <div className="logs-preview">
+                    <p>
+                      View detailed activity logs including patient record updates, consultations,
+                      contact modifications, and medical history changes for comprehensive tracking.
+                    </p>
+                    <div className="logs-features">
+                      <div className="feature-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <path d="M12 6v6l4 2"/>
+                        </svg>
+                        <span>Timestamped activities</span>
+                      </div>
+                      <div className="feature-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                          <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <span>User attribution</span>
+                      </div>
+                      <div className="feature-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14,2 14,8 20,8"/>
+                        </svg>
+                        <span>Detailed activity descriptions</span>
+                      </div>
+                      <div className="feature-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+                        </svg>
+                        <span>Filterable by activity type</span>
+                      </div>
+                    </div>
+                    <button className="btn-primary" onClick={handleViewLogs}>
+                      Open Activity Log Viewer
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -542,6 +722,32 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal Components */}
+      <PatientContactModal
+        isOpen={contactModalOpen}
+        patient={patient}
+        contact={selectedContact}
+        onClose={() => {
+          setContactModalOpen(false);
+          setSelectedContact(null);
+        }}
+        onContactSaved={handleContactSaved}
+      />
+
+      <MedicalHistoryModal
+        isOpen={medicalHistoryModalOpen}
+        patient={patient}
+        medicalHistory={medicalHistory}
+        onClose={() => setMedicalHistoryModalOpen(false)}
+        onMedicalHistorySaved={handleMedicalHistorySaved}
+      />
+
+      <PatientMonitoringLogsModal
+        isOpen={logsModalOpen}
+        patient={patient}
+        onClose={() => setLogsModalOpen(false)}
+      />
     </div>
   );
 };
